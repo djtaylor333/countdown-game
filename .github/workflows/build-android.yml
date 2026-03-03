@@ -105,10 +105,12 @@ jobs:
             A daily word and numbers puzzle game inspired by the British TV show Countdown.
 
             ### Features
-            - **Letters Round**: Select 9 letters (consonants/vowels), find the longest word in 30 seconds
-            - **Numbers Round**: Use 6 numbers and basic arithmetic to reach a 3-digit target in 30 seconds
-            - **Daily Challenge**: Same puzzle for everyone, resets at midnight
-            - **Streak Tracking**: Keep your daily play and completion streaks alive
+            - **Daily challenge** — same puzzle for everyone worldwide, seeded by date
+            - **Practice mode** — random puzzle with no timer
+            - **Full Game** — 9 rounds in the classic Letters/Letters/Numbers pattern
+            - **Letters Round** — pick 9 letters, find the longest valid word in 60 seconds
+            - **Numbers Round** — use 6 numbers and arithmetic to reach a 3-digit target in 60 seconds
+            - **Streak tracking** — daily play and completion streaks
 
             ### Android Installation
             1. Download the APK file below
