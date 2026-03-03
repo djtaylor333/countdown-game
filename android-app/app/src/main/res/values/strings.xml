@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">CountDown</string>
+    <string name="round_letters">Letters Round</string>
+    <string name="round_numbers">Numbers Round</string>
+    <string name="play_today">Play Today</string>
+    <string name="your_score">Your Score</string>
+</resources>

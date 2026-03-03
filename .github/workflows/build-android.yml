@@ -16,15 +16,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK 21
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '21'
+          java-version: '17'
           cache: 'gradle'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Generate Android wordlist asset
+        run: python android-app/scripts/generate_android_wordlist.py
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+        working-directory: android-app
+
+      - name: Run unit tests
+        run: ./gradlew test --no-daemon
         working-directory: android-app
 
       - name: Build debug APK
@@ -47,12 +59,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK 21
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '21'
+          java-version: '17'
           cache: 'gradle'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Generate Android wordlist asset
+        run: python android-app/scripts/generate_android_wordlist.py
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew

@@ -1,0 +1,10 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. The Compose theme (CountdownGameTheme) handles
+         all in-app styling; this XML theme only sets the window chrome. -->
+    <style name="Theme.CountdownGame" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
+        <item name="android:windowBackground">#0F1A3D</item>
+    </style>
+</resources>
