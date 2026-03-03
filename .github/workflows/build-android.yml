@@ -87,6 +87,19 @@ jobs:
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> keystore.properties
         working-directory: android-app
 
+      - name: Validate keystore
+        run: |
+          echo "Keystore size: $(wc -c < countdown-release.jks) bytes"
+          echo "First bytes (hex): $(xxd -p -l 4 countdown-release.jks)"
+          keytool -list -keystore countdown-release.jks \
+            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            -storetype PKCS12 -v 2>&1 | head -20 || \
+          keytool -list -keystore countdown-release.jks \
+            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            -storetype JKS -v 2>&1 | head -20 || \
+          echo "Keystore validation failed - check KEYSTORE_BASE64 secret"
+        working-directory: android-app
+
       - name: Build release APK & AAB
         run: ./gradlew assembleRelease bundleRelease --no-daemon
         working-directory: android-app
