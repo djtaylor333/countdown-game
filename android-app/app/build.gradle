@@ -41,6 +41,7 @@ android {
                 storePassword keystoreProperties['storePassword']
                 keyAlias keystoreProperties['keyAlias']
                 keyPassword keystoreProperties['keyPassword']
+                storeType "PKCS12"
             }
         }
     }
