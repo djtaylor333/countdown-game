@@ -1,0 +1,25 @@
+{
+  "name": "CountDown Game",
+  "short_name": "CountDown",
+  "description": "Daily Countdown-inspired word and numbers game",
+  "start_url": "/countdown-game/",
+  "scope": "/countdown-game/",
+  "display": "standalone",
+  "background_color": "#070e1c",
+  "theme_color": "#070e1c",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/countdown-game/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/countdown-game/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,182 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg-deep: #070e1c;
+  --bg-card: #0f1f38;
+  --bg-panel: #162d50;
+  --accent: #f6c90e;
+  --accent-hover: #ffd700;
+  --blue-mid: #1e4176;
+  --blue-light: #2c5fa8;
+  --text-primary: #ffffff;
+  --text-secondary: #94a3b8;
+  --text-muted: #475569;
+  --tile-bg: #1a3560;
+  --tile-border: #2c5fa8;
+  --tile-selected: #f6c90e;
+  --success: #22c55e;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background-color: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+  overscroll-behavior: none;
+}
+
+/* Countdown clock pulse animation */
+@keyframes clock-tick {
+  0%   { opacity: 1; }
+  50%  { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+@keyframes tile-flip-in {
+  0%   { transform: rotateY(90deg) scale(0.8); opacity: 0; }
+  60%  { transform: rotateY(-10deg) scale(1.05); opacity: 1; }
+  100% { transform: rotateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes tile-drop {
+  0%   { transform: translateY(-40px) scale(0.8); opacity: 0; }
+  70%  { transform: translateY(4px) scale(1.02); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes bounce-in {
+  0%   { transform: scale(0.3); opacity: 0; }
+  50%  { transform: scale(1.1); }
+  80%  { transform: scale(0.95); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes pulse-ring {
+  0%   { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(24px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.animate-tile-flip   { animation: tile-flip-in 0.35s ease forwards; }
+.animate-tile-drop   { animation: tile-drop 0.25s ease forwards; }
+.animate-bounce-in   { animation: bounce-in 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards; }
+.animate-slide-up    { animation: slide-up 0.3s ease forwards; }
+.animate-fade-in     { animation: fade-in 0.4s ease forwards; }
+
+/* Orbitron for numeric displays */
+.font-orbitron {
+  font-family: 'Orbitron', monospace;
+}
+
+/* Letter tile styles */
+.letter-tile {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Orbitron', monospace;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.12s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+  background: var(--tile-bg);
+  border: 2px solid var(--tile-border);
+  color: var(--text-primary);
+}
+
+.letter-tile:hover:not(.used):not(.empty) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(246, 201, 14, 0.35);
+  border-color: var(--accent);
+}
+
+.letter-tile.used {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.letter-tile.selected {
+  background: var(--accent);
+  color: var(--bg-deep);
+  border-color: var(--accent-hover);
+  box-shadow: 0 0 12px rgba(246, 201, 14, 0.5);
+}
+
+/* Number tile styles */
+.number-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Orbitron', monospace;
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  user-select: none;
+}
+
+.number-tile.large {
+  background: linear-gradient(135deg, #1e3a6e, #2c5fa8);
+  border: 2px solid #4a8fd8;
+  color: var(--accent);
+}
+
+.number-tile.small {
+  background: var(--tile-bg);
+  border: 2px solid var(--tile-border);
+  color: var(--text-primary);
+}
+
+.number-tile:hover:not(.used) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(246, 201, 14, 0.3);
+  border-color: var(--accent);
+}
+
+.number-tile.used {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* Clock ring */
+.clock-ring {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  transform-origin: center;
+  transform: rotate(-90deg);
+  transition: stroke-dashoffset 1s linear, stroke 0.3s ease;
+}
+
+.clock-ring.urgent {
+  stroke: var(--danger);
+  animation: clock-tick 0.5s ease-in-out infinite;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--blue-mid); border-radius: 4px; }

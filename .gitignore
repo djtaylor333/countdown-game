@@ -1,0 +1,39 @@
+# Node / Next.js
+node_modules/
+.next/
+out/
+dist/
+.env.local
+.env*.local
+
+# Android
+*.jks
+*.keystore
+local.properties
+keystore.properties
+.gradle/
+.kotlin/
+build/
+app/build/
+android-app/.gradle/
+android-app/.kotlin/
+android-app/build/
+android-app/app/build/
+android-app/local.properties
+android-app/keystore.properties
+google-services.json
+
+# IDE
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
