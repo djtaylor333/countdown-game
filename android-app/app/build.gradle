@@ -79,6 +79,11 @@ android {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
         }
     }
+
+    lint {
+        // Workaround: lifecycle-lint crashes with Kotlin Analysis API (KaCallableMemberCall incompatibility)
+        disable 'NullSafeMutableLiveData'
+    }
 }
 
 dependencies {
