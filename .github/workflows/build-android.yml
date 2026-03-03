@@ -78,6 +78,19 @@ jobs:
         run: chmod +x gradlew
         working-directory: android-app
 
+      - name: Check signing secrets
+        run: |
+          if [ -z "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "::error::KEYSTORE_BASE64 secret is not configured."
+            echo "::error::Add the following GitHub repository secrets to enable release signing:"
+            echo "::error::  KEYSTORE_BASE64   — base64 of your .jks/.p12 keystore"
+            echo "::error::  KEYSTORE_PASSWORD — keystore store password"
+            echo "::error::  KEY_ALIAS         — key alias inside the keystore"
+            echo "::error::  KEY_PASSWORD      — key password"
+            echo "::error::See README.md for instructions on generating and configuring these secrets."
+            exit 1
+          fi
+
       - name: Create keystore from secret
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > countdown-release.jks

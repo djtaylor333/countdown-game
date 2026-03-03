@@ -74,6 +74,44 @@ npm test         # run unit tests
 npm run build    # production build
 ```
 
+### Android App
+
+```bash
+cd android-app
+./gradlew assembleDebug     # debug APK
+./gradlew test              # unit tests
+```
+
+### Android Release Signing (GitHub Secrets)
+
+The Android release job requires four repository secrets. Go to **GitHub → Settings → Secrets and variables → Actions → New repository secret** and add:
+
+| Secret | Value |
+|--------|-------|
+| `KEYSTORE_BASE64` | Base64-encoded PKCS12 keystore file |
+| `KEYSTORE_PASSWORD` | Keystore store password |
+| `KEY_ALIAS` | Key alias inside the keystore |
+| `KEY_PASSWORD` | Key password |
+
+**Generating a new keystore** (run once, keep the file safe):
+```bash
+keytool -genkeypair -v \
+  -keystore countdown-release.jks \
+  -alias countdown-key \
+  -keyalg RSA -keysize 2048 -validity 10000 \
+  -storetype PKCS12 \
+  -storepass YOUR_STORE_PASSWORD \
+  -keypass YOUR_KEY_PASSWORD
+
+# Encode for GitHub secret (Linux/macOS):
+base64 -w 0 countdown-release.jks
+
+# Encode for GitHub secret (Windows PowerShell):
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("countdown-release.jks"))
+```
+
+Paste the encoded output as `KEYSTORE_BASE64`.
+
 ### Releasing
 
 ```powershell
