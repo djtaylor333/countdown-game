@@ -32,7 +32,7 @@ export default function NumberBoard({ numbers, largeNumbers, usedIndices, target
       {/* Available numbers */}
       <div className="flex flex-col items-center gap-2">
         <p className="text-xs text-slate-400 uppercase tracking-widest font-medium">Numbers</p>
-        <div className="flex gap-2 flex-nowrap justify-center overflow-x-auto w-full py-1">
+        <div className="grid grid-cols-6 gap-1.5 sm:gap-2 w-full py-1">
           {numbers.map((n, i) => (
             <NumberTile
               key={i}

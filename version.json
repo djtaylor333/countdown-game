@@ -1,9 +1,9 @@
 {
-  "versionName": "1.0.3",
-  "versionCode": 3,
+  "versionName": "1.0.4",
+  "versionCode": 4,
   "minSdk": 29,
   "targetSdk": 35,
   "compileSdk": 35,
   "buildDate": "2026-03-03",
-  "releaseNotes": "Practice mode, Full Game (9 rounds), Russo One tile font, single-row boards, bigger tiles, epoch-seeded randomness"
+  "releaseNotes": "Space Grotesk tile font, responsive wider game layout, keyboard letter input, removed epoch text"
 }

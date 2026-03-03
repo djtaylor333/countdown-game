@@ -89,7 +89,7 @@ body {
   font-family: var(--font-rajdhani), monospace;
 }
 
-/* Russo One for letter/number game tiles */
+/* Space Grotesk for letter/number game tiles */
 .font-tile {
   font-family: var(--font-tile), sans-serif;
 }
@@ -101,7 +101,7 @@ body {
   align-items: center;
   justify-content: center;
   font-family: var(--font-tile), sans-serif;
-  font-weight: 400;
+  font-weight: 700;
   border-radius: 6px;
   cursor: pointer;
   transition: transform 0.12s ease, background-color 0.15s ease, box-shadow 0.15s ease;
@@ -131,11 +131,12 @@ body {
 
 /* Number tile styles */
 .number-tile {
+  aspect-ratio: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-tile), sans-serif;
-  font-weight: 400;
+  font-weight: 700;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.12s ease;

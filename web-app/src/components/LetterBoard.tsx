@@ -21,7 +21,7 @@ export default function LetterBoard({ letters, usedIndices, onPickLetter, phase 
       </p>
 
       {/* 9-tile grid — 5 on top row, 4 on bottom (or 3+3+3) */}
-      <div className="flex gap-2 flex-nowrap justify-center overflow-x-auto w-full py-1">
+      <div className="grid grid-cols-9 gap-1 sm:gap-1.5 w-full py-1">
         {slots.map((_, i) => (
           <LetterTile
             key={i}

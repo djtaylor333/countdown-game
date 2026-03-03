@@ -38,7 +38,7 @@ export default function WordBuilder({ wordLetters, wordIndices, onRemoveLast, on
             ))}
           </div>
         ) : (
-          <span className="text-slate-500 text-sm italic">Tap letters to build a word</span>
+          <span className="text-slate-500 text-sm italic">Tap or type letters to build a word</span>
         )}
       </div>
 

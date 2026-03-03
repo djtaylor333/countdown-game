@@ -36,7 +36,7 @@ export type AppMode = 'daily' | 'practice' | 'full';
 const LARGE_POOL_SRC = [25, 50, 75, 100];
 const SMALL_POOL_SRC = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10];
 
-/** Seeded Fisher-Yates — pass seed for deterministic results, omit for epoch-random */
+/** Seeded Fisher-Yates shuffle — pass seed for deterministic results */
 function shuffleArray<T>(arr: T[], seed?: number): T[] {
   const a = [...arr];
   if (seed !== undefined) {
@@ -469,6 +469,40 @@ function GamePageContent() {
     dispatch({ type: 'SET_LETTER_RESULT', result });
   }, [state.revealedLetters]);
 
+  // ── Keyboard input for letters game ──────────────────────────────────────
+
+  useEffect(() => {
+    if (!isLettersRound || (phase !== 'playing' && phase !== 'submitting')) return;
+
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      const key = e.key.toUpperCase();
+
+      if (/^[A-Z]$/.test(key)) {
+        e.preventDefault();
+        const idx = state.revealedLetters.findIndex(
+          (l, i) => l === key && !state.wordIndices.includes(i),
+        );
+        if (idx !== -1) dispatch({ type: 'PICK_LETTER', index: idx });
+      } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        dispatch({ type: 'REMOVE_LAST_LETTER' });
+      } else if (e.key === 'Enter' && state.wordIndices.length > 0) {
+        e.preventDefault();
+        if (phase === 'playing') {
+          dispatch({ type: 'SUBMIT_WORD' });
+        } else if (phase === 'submitting') {
+          handleSubmitWord();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [phase, isLettersRound, state.revealedLetters, state.wordIndices, dispatch, handleSubmitWord]);
+
   function handleSubmitNumbers() {
     const { steps } = state;
     const lastStep = steps[steps.length - 1];
@@ -542,7 +576,7 @@ function GamePageContent() {
   const modeBadge = state.mode === 'practice' ? 'Practice' : state.mode === 'full' ? 'Full Game' : '';
 
   return (
-    <main className="min-h-screen flex flex-col items-center px-4 py-4 max-w-md mx-auto gap-4">
+    <main className="min-h-screen flex flex-col items-center px-4 sm:px-8 py-4 w-full max-w-2xl mx-auto gap-4">
       {/* Header */}
       <div className="w-full flex items-center justify-between">
         <Link href="/" className="text-slate-400 hover:text-white transition-colors text-sm">← Home</Link>

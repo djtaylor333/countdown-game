@@ -11,14 +11,14 @@ interface Props {
 }
 
 const sizeMap = {
-  sm: 'w-10 h-10 text-base',
-  md: 'w-12 h-12 text-lg',
-  lg: 'w-14 h-14 text-2xl',
+  sm: 'text-xs sm:text-sm',
+  md: 'text-sm sm:text-base',
+  lg: 'text-base sm:text-xl',
 };
 
 export default function LetterTile({ letter, index, used, selected, size = 'md', onClick, animDelay = 0 }: Props) {
   const sizeClass = sizeMap[size];
-  const baseClass = `letter-tile ${sizeClass} font-tile rounded-md select-none`;
+  const baseClass = `letter-tile w-full ${sizeClass} font-tile rounded-md select-none`;
   const stateClass = selected ? 'selected' : used ? 'used' : '';
   const animClass = letter ? 'animate-tile-drop' : '';
 

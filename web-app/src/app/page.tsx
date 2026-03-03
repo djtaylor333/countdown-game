@@ -136,7 +136,7 @@ export default function HomePage() {
         >
           <div>
             <h3 className="font-rajdhani font-bold text-white text-lg">Practice Mode</h3>
-            <p className="text-xs text-slate-400 mt-0.5">2 Letters · 1 Numbers · No Timer · Epoch-seeded</p>
+                <p className="text-xs text-slate-400 mt-0.5">2 Letters · 1 Numbers · No Timer · Random puzzle</p>
           </div>
           <span className="text-2xl">🎯</span>
         </Link>

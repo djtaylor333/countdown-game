@@ -1,5 +1,5 @@
 ﻿import type { Metadata, Viewport } from 'next';
-import { Rajdhani, Inter, Russo_One } from 'next/font/google';
+import { Rajdhani, Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 
 const rajdhani = Rajdhani({
@@ -16,9 +16,9 @@ const inter = Inter({
   display: 'swap',
 });
 
-const russoOne = Russo_One({
+const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
-  weight: '400',
+  weight: ['500', '700'],
   variable: '--font-tile',
   display: 'swap',
 });
@@ -51,9 +51,9 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${rajdhani.variable} ${inter.variable} ${russoOne.variable}`}>
+    <html lang="en" className={`${rajdhani.variable} ${inter.variable} ${spaceGrotesk.variable}`}>
       <body className="min-h-screen bg-[#070e1c] text-white antialiased">
-        <div className="mx-auto max-w-md min-h-screen flex flex-col">
+        <div className="mx-auto w-full max-w-2xl min-h-screen flex flex-col">
           {children}
         </div>
       </body>
