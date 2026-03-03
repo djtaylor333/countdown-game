@@ -1,5 +1,9 @@
 # CountDown
 
+[![Deploy PWA](https://github.com/djtaylor333/countdown-game/actions/workflows/deploy-web.yml/badge.svg)](https://github.com/djtaylor333/countdown-game/actions/workflows/deploy-web.yml)
+[![Build Android](https://github.com/djtaylor333/countdown-game/actions/workflows/build-android.yml/badge.svg)](https://github.com/djtaylor333/countdown-game/actions/workflows/build-android.yml)
+![Version](https://img.shields.io/badge/version-1.0.4-blue)
+
 A daily word and numbers puzzle game inspired by the British TV show *Countdown*, available as a **Progressive Web App** (GitHub Pages) and **Android app**.
 
 Play at: **https://djtaylor333.github.io/countdown-game/**
@@ -27,13 +31,14 @@ Every day you get three rounds — same puzzle for all players worldwide:
 ## Features
 
 - 📅 **Daily challenge** — seeded by date, same puzzle for everyone
-- 🔤 **Letters mode** — authentic Countdown letter frequencies
+- 🎮 **Three modes** — Daily, Practice (no timer, random puzzle), Full Game (9 rounds)
+- 🔤 **Letters mode** — authentic Countdown letter frequencies; keyboard input supported
 - 🔢 **Numbers mode** — recursive solver finds the optimal solution
 - 📖 **Definitions** — best words explained via Free Dictionary API
 - 🔥 **Streaks** — play and completion streaks tracked locally
 - 📤 **Share results** — emoji summary for social sharing
-- 📱 **PWA** — installable on iOS and Android from the browser
-- ✅ **85 unit tests** — full TDD coverage of game logic
+- 📱 **PWA** — installable on iOS and Android; responsive layout for portrait/landscape and desktop
+- ✅ **110 unit tests** — full TDD coverage of game logic
 
 ---
 
@@ -87,17 +92,17 @@ This triggers:
 ### Web App — GitHub Pages
 
 ```
-push tag v*
+push to main
     └─► deploy-web.yml
             ├── npm ci
-            ├── npm test               (85 unit tests — must pass)
+            ├── npm test               (110 unit tests — must pass)
             ├── npm run build          (Next.js static export → out/)
             └── Deploy to gh-pages     → https://djtaylor333.github.io/countdown-game/
 ```
 
 Workflow file: [`.github/workflows/deploy-web.yml`](.github/workflows/deploy-web.yml)
 
-Triggers on any `v*` tag push (e.g. `v1.0.2`).
+Triggers on every push to `main`.
 
 ### Android App — GitHub Releases
 
