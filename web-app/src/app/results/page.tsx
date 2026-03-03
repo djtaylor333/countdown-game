@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { getTodayKey } from '../../logic/dailyChallenge';
 import { getTodayResult } from '../../logic/streak';
 import type { DailyResult } from '../../logic/types';
@@ -37,7 +38,7 @@ export default function ResultsPage() {
   return (
     <main className="min-h-screen flex flex-col px-4 py-8 max-w-md mx-auto">
       <div className="w-full flex items-center justify-between mb-6">
-        <a href="/" className="text-slate-400 hover:text-white transition-colors text-sm">← Home</a>
+        <Link href="/" className="text-slate-400 hover:text-white transition-colors text-sm">← Home</Link>
         <span className="font-orbitron text-sm text-slate-500">Results</span>
         <span className="w-12" />
       </div>

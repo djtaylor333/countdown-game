@@ -32,6 +32,10 @@ jobs:
         run: npm ci
         working-directory: web-app
 
+      - name: Run unit tests
+        run: npm test -- --no-coverage
+        working-directory: web-app
+
       - name: Build
         run: npm run build
         working-directory: web-app

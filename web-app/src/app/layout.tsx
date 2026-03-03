@@ -1,5 +1,20 @@
 import type { Metadata, Viewport } from 'next';
+import { Orbitron, Inter } from 'next/font/google';
 import './globals.css';
+
+const orbitron = Orbitron({
+  subsets: ['latin'],
+  weight: ['400', '700', '900'],
+  variable: '--font-orbitron',
+  display: 'swap',
+});
+
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-inter',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'CountDown — Daily Word & Numbers Game',
@@ -29,7 +44,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${orbitron.variable} ${inter.variable}`}>
       <body className="min-h-screen bg-[#070e1c] text-white antialiased">
         <div className="mx-auto max-w-md min-h-screen flex flex-col">
           {children}

@@ -2,6 +2,7 @@
 
 import { useEffect, useCallback, useReducer, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { getTodaysChallenge, getTodayKey } from '../../logic/dailyChallenge';
 import { isValidWord, findBestWords, scoreLetterRound } from '../../logic/letters';
 import { solveNumbers, scoreNumbersRound } from '../../logic/numbers';
@@ -420,7 +421,7 @@ export default function GamePage() {
     <main className="min-h-screen flex flex-col items-center px-4 py-4 max-w-md mx-auto gap-4">
       {/* Header */}
       <div className="w-full flex items-center justify-between">
-        <a href="/" className="text-slate-400 hover:text-white transition-colors text-sm">← Home</a>
+        <Link href="/" className="text-slate-400 hover:text-white transition-colors text-sm">← Home</Link>
         <span className="font-orbitron text-sm text-slate-300">{roundLabel}</span>
         <span className="text-xs text-slate-500">{round + 1}/3</span>
       </div>
