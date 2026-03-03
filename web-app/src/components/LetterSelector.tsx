@@ -42,7 +42,7 @@ export default function LetterSelector({ onPick, letterCount, vowelCount, conson
               : 'bg-[#0f1f38] border-2 border-[#1a2f4e] text-slate-600 cursor-not-allowed'}
           `}
         >
-          <span className="block text-lg font-bold font-orbitron">V</span>
+          <span className="block text-lg font-bold font-rajdhani">V</span>
           Vowel
         </button>
 
@@ -56,7 +56,7 @@ export default function LetterSelector({ onPick, letterCount, vowelCount, conson
               : 'bg-[#0f1f38] border-2 border-[#1a2f4e] text-slate-600 cursor-not-allowed'}
           `}
         >
-          <span className="block text-lg font-bold font-orbitron">C</span>
+          <span className="block text-lg font-bold font-rajdhani">C</span>
           Consonant
         </button>
       </div>

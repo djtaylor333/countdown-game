@@ -48,19 +48,19 @@ export default function DailySummary({ result, onPlayAgain }: DailySummaryProps)
     <div className="flex flex-col gap-5 animate-slide-up max-w-md mx-auto w-full">
       {/* Header */}
       <div className="flex flex-col items-center gap-2 pt-2">
-        <h2 className="font-orbitron font-black text-2xl tracking-wide text-white">Today&apos;s Results</h2>
+        <h2 className="font-rajdhani font-black text-2xl tracking-wide text-white">Today&apos;s Results</h2>
         <p className="text-sm text-slate-400">{result.dateKey}</p>
       </div>
 
       {/* Grade + total score */}
       <div className="flex items-center justify-center gap-6 rounded-2xl bg-[#0f1f38] border border-[#1a3560] p-5">
         <div className="flex flex-col items-center">
-          <span className={`font-orbitron font-black text-6xl leading-none ${gradeColor}`}>{grade}</span>
+          <span className={`font-rajdhani font-black text-6xl leading-none ${gradeColor}`}>{grade}</span>
           <span className="text-xs text-slate-500 mt-1 uppercase tracking-wide">Grade</span>
         </div>
         <div className="w-px h-12 bg-[#1a3560]" />
         <div className="flex flex-col items-center">
-          <span className="font-orbitron font-black text-4xl text-[#f6c90e] leading-none">{totalScore}</span>
+          <span className="font-rajdhani font-black text-4xl text-[#f6c90e] leading-none">{totalScore}</span>
           <span className="text-xs text-slate-500 mt-1 uppercase tracking-wide">out of {maxScore}</span>
         </div>
       </div>
@@ -84,7 +84,7 @@ export default function DailySummary({ result, onPlayAgain }: DailySummaryProps)
       <div className="flex flex-col gap-3">
         <button
           onClick={handleShare}
-          className="w-full py-3 rounded-2xl bg-[#f6c90e] text-[#070e1c] font-bold font-orbitron uppercase tracking-wide transition-all active:scale-95 hover:bg-[#fdd835]"
+          className="w-full py-3 rounded-2xl bg-[#f6c90e] text-[#070e1c] font-bold font-rajdhani uppercase tracking-wide transition-all active:scale-95 hover:bg-[#fdd835]"
         >
           {shared ? '✓ Copied to clipboard!' : '📤 Share Results'}
         </button>
@@ -107,7 +107,7 @@ function ScoreRow({ label, score, max, word }: { label: string; score: number; m
     <div className="flex items-center gap-3 rounded-xl bg-[#0f1f38] border border-[#1a3560] px-4 py-2.5">
       <div className="flex-1 min-w-0">
         <p className="text-xs text-slate-500 uppercase tracking-wide">{label}</p>
-        {word && <p className="text-sm font-orbitron tracking-widest text-slate-300 truncate mt-0.5">{word}</p>}
+        {word && <p className="text-sm font-rajdhani tracking-widest text-slate-300 truncate mt-0.5">{word}</p>}
       </div>
       <div className="flex items-center gap-1.5 shrink-0">
         <div className="w-16 h-1.5 rounded-full bg-[#1a3560] overflow-hidden">
@@ -116,7 +116,7 @@ function ScoreRow({ label, score, max, word }: { label: string; score: number; m
             style={{ width: `${pct * 100}%` }}
           />
         </div>
-        <span className="font-orbitron font-bold text-sm text-[#f6c90e] w-10 text-right">
+        <span className="font-rajdhani font-bold text-sm text-[#f6c90e] w-10 text-right">
           {score}/{max}
         </span>
       </div>

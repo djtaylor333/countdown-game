@@ -23,7 +23,7 @@ export default function NumberBoard({ numbers, largeNumbers, usedIndices, target
       <div className="flex flex-col items-center gap-1">
         <p className="text-xs text-slate-400 uppercase tracking-widest font-medium">Target</p>
         <div className="bg-[#1a3560] border-2 border-[#f6c90e] rounded-2xl px-8 py-3 shadow-[0_0_20px_rgba(246,201,14,0.25)]">
-          <span className="font-orbitron font-black text-4xl text-[#f6c90e] tracking-wider">
+          <span className="font-rajdhani font-black text-4xl text-[#f6c90e] tracking-wider">
             {target}
           </span>
         </div>

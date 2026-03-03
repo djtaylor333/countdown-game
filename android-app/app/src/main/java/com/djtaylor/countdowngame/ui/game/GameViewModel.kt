@@ -60,18 +60,41 @@ class GameViewModel @Inject constructor(
         }
     }
 
+    /** User taps "Large" during numbers selecting phase. */
+    fun pickLargeNumber() {
+        val state = _uiState.value
+        if (state.pickedNumbers.size >= 6 || state.numLargePool.isEmpty()) return
+        val n = state.numLargePool.first()
+        _uiState.update { it.copy(
+            pickedNumbers = it.pickedNumbers + n,
+            numLargePool  = it.numLargePool.drop(1)
+        ) }
+    }
+
+    /** User taps "Small" during numbers selecting phase. */
+    fun pickSmallNumber() {
+        val state = _uiState.value
+        if (state.pickedNumbers.size >= 6 || state.numSmallPool.isEmpty()) return
+        val n = state.numSmallPool.first()
+        _uiState.update { it.copy(
+            pickedNumbers = it.pickedNumbers + n,
+            numSmallPool  = it.numSmallPool.drop(1)
+        ) }
+    }
+
     private fun startPlaying() {
         val challenge = _uiState.value.challenge ?: return
         val round     = _uiState.value.currentRound
         val letters   = if (round == 0) challenge.letterRound1 else challenge.letterRound2
+        val nums      = if (round == 2) _uiState.value.pickedNumbers else challenge.numbers
         _uiState.update { it.copy(
             phase            = GamePhase.PLAYING,
-            timeRemaining    = 30,
+            timeRemaining    = 60,
             selectedLetters  = letters,
             currentWord      = emptyList(),
             currentWordIndices = emptyList(),
             equationSteps    = emptyList(),
-            availableNums    = challenge.numbers,
+            availableNums    = nums,
             currentLeft      = null,
             currentOp        = null
         ) }
@@ -81,7 +104,7 @@ class GameViewModel @Inject constructor(
     private fun startTimer() {
         timerJob?.cancel()
         timerJob = viewModelScope.launch {
-            for (seconds in 30 downTo 0) {
+            for (seconds in 60 downTo 0) {
                 if (!isActive) break
                 _uiState.update { it.copy(timeRemaining = seconds) }
                 if (seconds == 0) {
@@ -239,7 +262,7 @@ class GameViewModel @Inject constructor(
         val state = _uiState.value
         _uiState.update { it.copy(
             equationSteps = emptyList(),
-            availableNums = state.challenge?.numbers ?: emptyList(),
+            availableNums = state.pickedNumbers,
             currentLeft   = null,
             currentOp     = null
         ) }
@@ -249,12 +272,12 @@ class GameViewModel @Inject constructor(
     fun submitNumbers() {
         val state = _uiState.value
         viewModelScope.launch {
-            val (valid, finalResult) = NumbersEngine.validateSteps(state.equationSteps, state.challenge?.numbers ?: emptyList())
+            val (valid, finalResult) = NumbersEngine.validateSteps(state.equationSteps, state.pickedNumbers)
             val userResult = if (valid) finalResult else null
             val diff       = if (userResult != null) kotlin.math.abs(userResult - state.target) else state.target
             val score      = if (valid && userResult != null) NumbersEngine.scoreNumbersRound(diff) else 0
             val solution   = withContext(Dispatchers.Default) {
-                NumbersEngine.solveNumbers(state.numbers, state.target).steps
+                NumbersEngine.solveNumbers(state.pickedNumbers, state.target).steps
             }
             _uiState.update { it.copy(
                 numbersResult = userResult,
@@ -290,9 +313,12 @@ class GameViewModel @Inject constructor(
                 wordIsValid   = null,
                 wordScore     = 0,
                 equationSteps = emptyList(),
-                availableNums = state.challenge?.numbers ?: emptyList(),
+                availableNums = emptyList(),
                 currentLeft   = null,
-                currentOp     = null
+                currentOp     = null,
+                pickedNumbers = emptyList(),
+                numLargePool  = listOf(25, 50, 75, 100).shuffled(),
+                numSmallPool  = listOf(1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10).shuffled()
             ) }
         } else {
             // All 3 rounds done — save and move to complete

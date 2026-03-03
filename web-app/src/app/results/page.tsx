@@ -28,7 +28,7 @@ export default function ResultsPage() {
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center">
-        <span className="font-orbitron text-[#f6c90e] text-xl animate-pulse">Loading…</span>
+        <span className="font-rajdhani text-[#f6c90e] text-xl animate-pulse">Loading…</span>
       </main>
     );
   }
@@ -39,7 +39,7 @@ export default function ResultsPage() {
     <main className="min-h-screen flex flex-col px-4 py-8 max-w-md mx-auto">
       <div className="w-full flex items-center justify-between mb-6">
         <Link href="/" className="text-slate-400 hover:text-white transition-colors text-sm">← Home</Link>
-        <span className="font-orbitron text-sm text-slate-500">Results</span>
+        <span className="font-rajdhani text-sm text-slate-500">Results</span>
         <span className="w-12" />
       </div>
 

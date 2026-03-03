@@ -44,7 +44,7 @@ export default function NumberBuilder({
       {steps.length > 0 && (
         <div className="bg-[#0a1628] rounded-xl p-3 flex flex-col gap-1 border border-[#1a3560]">
           {steps.map((s, i) => (
-            <div key={i} className="text-sm font-orbitron text-slate-300 flex items-center gap-1">
+            <div key={i} className="text-sm font-rajdhani text-slate-300 flex items-center gap-1">
               <span className="text-slate-400">{s.left}</span>
               <span className="text-[#f6c90e] mx-1">{s.op}</span>
               <span className="text-slate-400">{s.right}</span>
@@ -67,11 +67,11 @@ export default function NumberBuilder({
       <div className="flex items-center justify-center gap-2 min-h-[44px] bg-[#0f1f38] rounded-xl border-2 border-[#1a3560] px-4 py-2">
         {currentLeft !== null ? (
           <>
-            <span className="font-orbitron font-bold text-xl text-[#f6c90e]">{currentLeft}</span>
+            <span className="font-rajdhani font-bold text-xl text-[#f6c90e]">{currentLeft}</span>
             {currentOp && (
               <>
-                <span className="font-orbitron font-bold text-xl text-white mx-1">{currentOp}</span>
-                <span className="font-orbitron text-slate-400 text-xl">?</span>
+                <span className="font-rajdhani font-bold text-xl text-white mx-1">{currentOp}</span>
+                <span className="font-rajdhani text-slate-400 text-xl">?</span>
               </>
             )}
           </>
@@ -93,7 +93,7 @@ export default function NumberBuilder({
               }}
               disabled={!isPickable}
               className={`
-                number-tile ${LARGE.has(n) ? 'large' : 'small'} w-12 h-12 text-base font-orbitron font-bold rounded-xl
+                number-tile ${LARGE.has(n) ? 'large' : 'small'} w-12 h-12 text-base font-rajdhani font-bold rounded-xl
                 ${!isPickable ? 'opacity-40 cursor-not-allowed' : 'active:scale-90'}
               `}
             >

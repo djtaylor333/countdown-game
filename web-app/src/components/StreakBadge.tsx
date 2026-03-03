@@ -12,7 +12,7 @@ export default function StreakBadge({ streaks, mini = false }: StreakBadgeProps)
     return (
       <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0f1f38] border border-[#1a3560]">
         <span className="text-base">🔥</span>
-        <span className="font-orbitron font-bold text-sm text-[#f6c90e]">
+        <span className="font-rajdhani font-bold text-sm text-[#f6c90e]">
           {streaks.currentPlayStreak}
         </span>
       </div>
@@ -42,7 +42,7 @@ function StreakCell({
   return (
     <div className="flex-1 flex flex-col items-center gap-0.5 rounded-2xl bg-[#0f1f38] border border-[#1a3560] p-3">
       <span className="text-2xl leading-none">{icon}</span>
-      <span className="font-orbitron font-black text-2xl text-[#f6c90e] leading-none mt-1">
+      <span className="font-rajdhani font-black text-2xl text-[#f6c90e] leading-none mt-1">
         {value}
       </span>
       <span className="text-xs text-slate-400 text-center leading-tight mt-0.5">{label}</span>

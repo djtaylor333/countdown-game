@@ -1,11 +1,11 @@
-import type { Metadata, Viewport } from 'next';
-import { Orbitron, Inter } from 'next/font/google';
+﻿import type { Metadata, Viewport } from 'next';
+import { Rajdhani, Inter } from 'next/font/google';
 import './globals.css';
 
-const orbitron = Orbitron({
+const rajdhani = Rajdhani({
   subsets: ['latin'],
-  weight: ['400', '700', '900'],
-  variable: '--font-orbitron',
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-rajdhani',
   display: 'swap',
 });
 
@@ -44,7 +44,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${orbitron.variable} ${inter.variable}`}>
+    <html lang="en" className={`${rajdhani.variable} ${inter.variable}`}>
       <body className="min-h-screen bg-[#070e1c] text-white antialiased">
         <div className="mx-auto max-w-md min-h-screen flex flex-col">
           {children}

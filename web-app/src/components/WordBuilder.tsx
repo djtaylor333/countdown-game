@@ -30,7 +30,7 @@ export default function WordBuilder({ wordLetters, wordIndices, onRemoveLast, on
             {wordLetters.map((l, i) => (
               <span
                 key={`${l}-${wordIndices[i]}`}
-                className="font-orbitron font-bold text-xl text-[#f6c90e] animate-tile-drop"
+                className="font-rajdhani font-bold text-xl text-[#f6c90e] animate-tile-drop"
                 style={{ animationDelay: `${i * 40}ms` }}
               >
                 {l}

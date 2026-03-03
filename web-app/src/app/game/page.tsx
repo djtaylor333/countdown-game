@@ -1,10 +1,10 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useCallback, useReducer, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getTodaysChallenge, getTodayKey } from '../../logic/dailyChallenge';
-import { isValidWord, findBestWords, scoreLetterRound } from '../../logic/letters';
+import { isValidWord, findBestWords, scoreLetterRound, pickVowel, pickConsonant, resetDecks } from '../../logic/letters';
 import { solveNumbers, scoreNumbersRound } from '../../logic/numbers';
 import { recordDailyPlay } from '../../logic/streak';
 import type {
@@ -23,6 +23,18 @@ import NumberBuilder from '../../components/NumberBuilder';
 import { LetterRoundResultPanel, NumberRoundResultPanel } from '../../components/RoundResult';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+const LARGE_POOL_SRC = [25, 50, 75, 100];
+const SMALL_POOL_SRC = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10];
+
+function shuffleArray<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 type RoundPhase = 'selecting' | 'countdown' | 'playing' | 'submitting' | 'results';
 type Round = 0 | 1 | 2; // 0=letters1, 1=letters2, 2=numbers
@@ -44,6 +56,10 @@ interface GameState {
   availableNumbers: number[];  // changes as steps complete
   currentLeft: number | null;
   currentOp: Operation | null;
+  // Numbers picker (selecting phase)
+  pickedNumbers: number[];
+  numLargePool: number[];
+  numSmallPool: number[];
   // Results
   letterResult1: LetterRoundResult | null;
   letterResult2: LetterRoundResult | null;
@@ -67,6 +83,8 @@ type GameAction =
   | { type: 'PICK_RIGHT'; value: number }
   | { type: 'UNDO_STEP' }
   | { type: 'CLEAR_NUMBERS' }
+  | { type: 'PICK_LARGE_NUMBER' }
+  | { type: 'PICK_SMALL_NUMBER' }
   | { type: 'SUBMIT_NUMBERS' }
   | { type: 'SET_NUMBER_RESULT'; result: NumberRoundResult }
   | { type: 'NEXT_ROUND' };
@@ -77,16 +95,19 @@ function initState(challenge: DailyChallenge): GameState {
     round: 0,
     phase: 'selecting',
     countdownVal: 3,
-    timeRemaining: 30,
+    timeRemaining: 60,
     revealedLetters: [],
     vowelCount: 0,
     consonantCount: 0,
     wordIndices: [],
     submittedWord: '',
     steps: [],
-    availableNumbers: [...challenge.numbers],
+    availableNumbers: [],
     currentLeft: null,
     currentOp: null,
+    pickedNumbers: [],
+    numLargePool: shuffleArray(LARGE_POOL_SRC),
+    numSmallPool: shuffleArray(SMALL_POOL_SRC),
     letterResult1: null,
     letterResult2: null,
     numberResult: null,
@@ -110,7 +131,12 @@ function reducer(state: GameState, action: GameAction): GameState {
       return { ...state, countdownVal: Math.max(0, state.countdownVal - 1) };
 
     case 'START_PLAYING':
-      return { ...state, phase: 'playing', timeRemaining: 30 };
+      return {
+        ...state,
+        phase: 'playing',
+        timeRemaining: 60,
+        availableNumbers: state.round === 2 ? [...state.pickedNumbers] : state.availableNumbers,
+      };
 
     case 'TICK_TIMER':
       return { ...state, timeRemaining: Math.max(0, state.timeRemaining - 1) };
@@ -206,10 +232,22 @@ function reducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         steps: [],
-        availableNumbers: [...state.challenge.numbers],
+        availableNumbers: [...state.pickedNumbers],
         currentLeft: null,
         currentOp: null,
       };
+
+    case 'PICK_LARGE_NUMBER': {
+      if (state.pickedNumbers.length >= 6 || state.numLargePool.length === 0) return state;
+      const [n, ...rest] = state.numLargePool;
+      return { ...state, numLargePool: rest, pickedNumbers: [...state.pickedNumbers, n] };
+    }
+
+    case 'PICK_SMALL_NUMBER': {
+      if (state.pickedNumbers.length >= 6 || state.numSmallPool.length === 0) return state;
+      const [n, ...rest] = state.numSmallPool;
+      return { ...state, numSmallPool: rest, pickedNumbers: [...state.pickedNumbers, n] };
+    }
 
     case 'SUBMIT_NUMBERS':
       return { ...state, phase: 'submitting', timeRemaining: 0 };
@@ -224,17 +262,20 @@ function reducer(state: GameState, action: GameAction): GameState {
         round: nextRound,
         phase: 'selecting',
         countdownVal: 3,
-        timeRemaining: 30,
+        timeRemaining: 60,
         revealedLetters: [],
         vowelCount: 0,
         consonantCount: 0,
         wordIndices: [],
         submittedWord: '',
-        // Re-init numbers if going to numbers round
+        // Re-init numbers round state
         steps: [],
-        availableNumbers: [...state.challenge.numbers],
+        availableNumbers: [],
         currentLeft: null,
         currentOp: null,
+        pickedNumbers: [],
+        numLargePool: shuffleArray(LARGE_POOL_SRC),
+        numSmallPool: shuffleArray(SMALL_POOL_SRC),
       };
     }
 
@@ -257,7 +298,12 @@ export default function GamePage() {
 
   const { challenge, round, phase, countdownVal, timeRemaining } = state;
 
-  const LARGE_SET = new Set(challenge.numbers.filter(n => [25, 50, 75, 100].includes(n)));
+  const LARGE_SET = new Set(state.pickedNumbers.filter(n => [25, 50, 75, 100].includes(n)));
+
+  // ── Reset letter decks at the start of each letters round ───────────────
+  useEffect(() => {
+    if (round < 2 && phase === 'selecting') resetDecks();
+  }, [round, phase]);
 
   // ── Countdown (3-2-1) timer ───────────────────────────────────────────────
 
@@ -293,12 +339,10 @@ export default function GamePage() {
   // ── Handlers ─────────────────────────────────────────────────────────────
 
   function handleRevealLetter(type: 'consonant' | 'vowel') {
-    const pool = round === 0 ? challenge.letterRound1 : challenge.letterRound2;
     const idx = state.revealedLetters.length;
     if (idx >= 9) return;
-    const letter = pool[idx];
-    const isVowel = type === 'vowel';
-    dispatch({ type: 'REVEAL_LETTER', letter, isVowel });
+    const letter = type === 'vowel' ? pickVowel() : pickConsonant();
+    dispatch({ type: 'REVEAL_LETTER', letter, isVowel: type === 'vowel' });
     if (idx + 1 === 9) {
       setTimeout(() => dispatch({ type: 'START_COUNTDOWN' }), 300);
     }
@@ -350,7 +394,7 @@ export default function GamePage() {
     const diff = userResult !== null ? Math.abs(userResult - c.target) : Infinity;
     const userScore = isFinite(diff) ? scoreNumbersRound(diff) : 0;
 
-    const solutionResult = solveNumbers(c.numbers, c.target);
+    const solutionResult = solveNumbers(state.pickedNumbers, c.target);
 
     const result: NumberRoundResult = {
       userResult,
@@ -399,11 +443,9 @@ export default function GamePage() {
   const usedLetterIndices = state.wordIndices;
 
   // ── usedOriginalIndices for NumberBoard ──────────────────────────────────
-  // Rough: compare original numbers count with available numbers count
   const usedNumberIndices = new Set<number>();
-  // Track by rebuilding from steps
   {
-    const pool = [...challenge.numbers];
+    const pool = [...state.pickedNumbers];
     for (const step of state.steps) {
       const li = pool.indexOf(step.left);
       if (li !== -1) { usedNumberIndices.add(li); pool.splice(li, 1); }
@@ -422,7 +464,7 @@ export default function GamePage() {
       {/* Header */}
       <div className="w-full flex items-center justify-between">
         <Link href="/" className="text-slate-400 hover:text-white transition-colors text-sm">← Home</Link>
-        <span className="font-orbitron text-sm text-slate-300">{roundLabel}</span>
+        <span className="font-rajdhani text-sm text-slate-300">{roundLabel}</span>
         <span className="text-xs text-slate-500">{round + 1}/3</span>
       </div>
 
@@ -448,19 +490,86 @@ export default function GamePage() {
       )}
 
       {phase === 'selecting' && round === 2 && (
-        <div className="w-full flex flex-col gap-6 items-center">
-          <p className="text-slate-400 text-sm">Today&apos;s Numbers Round</p>
-          <NumberBoard
-            numbers={challenge.numbers}
-            largeNumbers={LARGE_SET}
-            usedIndices={[]}
-            target={challenge.target}
-            onPickNumber={() => {}}
-            phase="playing"
-          />
+        <div className="w-full flex flex-col gap-5 items-center">
+          <div className="text-center">
+            <p className="text-slate-300 text-sm font-semibold">Pick your 6 numbers</p>
+            <p className="text-xs text-slate-500 mt-1">
+              {state.pickedNumbers.length}/6 chosen &bull; up to 4 large (25–100)
+            </p>
+          </div>
+
+          {/* Target */}
+          <div className="flex flex-col items-center gap-1">
+            <p className="text-xs text-slate-400 uppercase tracking-widest">Target</p>
+            <div className="bg-[#1a3560] border-2 border-[#f6c90e] rounded-2xl px-8 py-3 shadow-[0_0_20px_rgba(246,201,14,0.25)]">
+              <span className="font-rajdhani font-black text-4xl text-[#f6c90e] tracking-wider">
+                {challenge.target}
+              </span>
+            </div>
+          </div>
+
+          {/* Picked number slots */}
+          <div className="flex gap-2 flex-wrap justify-center min-h-[3.5rem]">
+            {state.pickedNumbers.map((n, i) => {
+              const isLarge = [25, 50, 75, 100].includes(n);
+              return (
+                <div key={i} className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-base border-2 ${isLarge ? 'bg-[#2c1e00] border-[#f6c90e] text-[#f6c90e]' : 'bg-[#1a3560] border-[#2c5fa8] text-white'}`}>
+                  {n}
+                </div>
+              );
+            })}
+            {Array.from({ length: 6 - state.pickedNumbers.length }).map((_, i) => (
+              <div key={`empty-${i}`} className="w-12 h-12 rounded-xl border-2 border-dashed border-[#1a3560]" />
+            ))}
+          </div>
+
+          {/* Large / Small buttons */}
+          <div className="flex gap-3">
+            {(() => {
+              const largeUsed = state.pickedNumbers.filter(n => [25, 50, 75, 100].includes(n)).length;
+              const canLarge = state.pickedNumbers.length < 6 && state.numLargePool.length > 0 && largeUsed < 4;
+              return (
+                <button
+                  onClick={() => dispatch({ type: 'PICK_LARGE_NUMBER' })}
+                  disabled={!canLarge}
+                  className={`px-6 py-3 rounded-xl font-semibold text-sm tracking-wide transition-all duration-150 ${
+                    canLarge
+                      ? 'bg-[#2c1e00] border-2 border-[#f6c90e] text-[#f6c90e] hover:bg-[#3e2b00] active:scale-95'
+                      : 'bg-[#0f1f38] border-2 border-[#1a2f4e] text-slate-600 cursor-not-allowed'
+                  }`}
+                >
+                  <span className="block text-lg font-bold">25–100</span>
+                  Large
+                </button>
+              );
+            })()}
+            {(() => {
+              const canSmall = state.pickedNumbers.length < 6 && state.numSmallPool.length > 0;
+              return (
+                <button
+                  onClick={() => dispatch({ type: 'PICK_SMALL_NUMBER' })}
+                  disabled={!canSmall}
+                  className={`px-6 py-3 rounded-xl font-semibold text-sm tracking-wide transition-all duration-150 ${
+                    canSmall
+                      ? 'bg-[#1e4176] border-2 border-[#2c5fa8] text-white hover:border-[#f6c90e] hover:bg-[#2c5fa8] active:scale-95'
+                      : 'bg-[#0f1f38] border-2 border-[#1a2f4e] text-slate-600 cursor-not-allowed'
+                  }`}
+                >
+                  <span className="block text-lg font-bold">1–10</span>
+                  Small
+                </button>
+              );
+            })()}
+          </div>
+
           <button
             onClick={() => dispatch({ type: 'START_COUNTDOWN' })}
-            className="w-full py-3 rounded-2xl bg-[#f6c90e] text-[#070e1c] font-bold font-orbitron uppercase tracking-wide transition-all active:scale-95"
+            disabled={state.pickedNumbers.length < 6}
+            className={`w-full py-3 rounded-2xl font-bold font-rajdhani uppercase tracking-wide transition-all active:scale-95 ${
+              state.pickedNumbers.length === 6
+                ? 'bg-[#f6c90e] text-[#070e1c]'
+                : 'bg-[#0f1f38] text-slate-600 cursor-not-allowed border border-[#1a2f4e]'
+            }`}
           >
             Start Round
           </button>
@@ -470,7 +579,7 @@ export default function GamePage() {
       {/* ── COUNTDOWN ── */}
       {phase === 'countdown' && (
         <div className="flex-1 flex items-center justify-center">
-          <span className="font-orbitron font-black text-9xl text-[#f6c90e] animate-bounce-in">
+          <span className="font-rajdhani font-black text-9xl text-[#f6c90e] animate-bounce-in">
             {countdownVal === 0 ? 'GO!' : countdownVal}
           </span>
         </div>
@@ -479,7 +588,7 @@ export default function GamePage() {
       {/* ── PLAYING — Letters ── */}
       {phase === 'playing' && round < 2 && (
         <div className="w-full flex flex-col gap-4">
-          <CountdownClock totalSeconds={30} remaining={timeRemaining} />
+          <CountdownClock totalSeconds={60} remaining={timeRemaining} />
           <LetterBoard
             letters={state.revealedLetters}
             usedIndices={usedLetterIndices}
@@ -499,9 +608,9 @@ export default function GamePage() {
       {/* ── PLAYING — Numbers ── */}
       {phase === 'playing' && round === 2 && (
         <div className="w-full flex flex-col gap-4">
-          <CountdownClock totalSeconds={30} remaining={timeRemaining} />
+          <CountdownClock totalSeconds={60} remaining={timeRemaining} />
           <NumberBoard
-            numbers={challenge.numbers}
+            numbers={state.pickedNumbers}
             largeNumbers={LARGE_SET}
             usedIndices={[...usedNumberIndices]}
             target={challenge.target}
@@ -509,7 +618,7 @@ export default function GamePage() {
             phase="playing"
           />
           <NumberBuilder
-            numbers={challenge.numbers}
+            numbers={state.pickedNumbers}
             usedIndices={[...usedNumberIndices]}
             availableNumbers={state.availableNumbers}
             currentLeft={state.currentLeft}
@@ -524,7 +633,7 @@ export default function GamePage() {
           />
           <button
             onClick={() => dispatch({ type: 'SUBMIT_NUMBERS' })}
-            className="w-full py-3 rounded-2xl bg-[#f6c90e] text-[#070e1c] font-bold font-orbitron uppercase tracking-wide transition-all active:scale-95"
+            className="w-full py-3 rounded-2xl bg-[#f6c90e] text-[#070e1c] font-bold font-rajdhani uppercase tracking-wide transition-all active:scale-95"
           >
             Lock In Answer
           </button>
@@ -559,7 +668,7 @@ export default function GamePage() {
             </button>
           )}
           {isValidating && (
-            <p className="text-center text-[#f6c90e] font-orbitron animate-pulse">Checking word…</p>
+            <p className="text-center text-[#f6c90e] font-rajdhani animate-pulse">Checking word…</p>
           )}
         </div>
       )}
@@ -569,7 +678,7 @@ export default function GamePage() {
         <div className="w-full flex flex-col gap-4">
           <p className="text-center text-slate-400">Confirm your answer</p>
           <NumberBoard
-            numbers={challenge.numbers}
+            numbers={state.pickedNumbers}
             largeNumbers={LARGE_SET}
             usedIndices={[...usedNumberIndices]}
             target={challenge.target}
@@ -579,7 +688,7 @@ export default function GamePage() {
           {state.steps.length > 0 && (
             <div className="rounded-xl bg-[#0a1628] border border-[#1a3560] p-3">
               {state.steps.map((s, i) => (
-                <p key={i} className="text-sm font-orbitron text-slate-300">
+                <p key={i} className="text-sm font-rajdhani text-slate-300">
                   {s.left} {s.op} {s.right} = <span className={s.result === challenge.target ? 'text-green-400 font-bold' : 'text-white'}>{s.result}</span>
                 </p>
               ))}
@@ -594,7 +703,7 @@ export default function GamePage() {
             </button>
             <button
               onClick={handleSubmitNumbers}
-              className="flex-1 py-3 rounded-2xl bg-[#f6c90e] text-[#070e1c] font-bold font-orbitron uppercase tracking-wide transition-all active:scale-95"
+              className="flex-1 py-3 rounded-2xl bg-[#f6c90e] text-[#070e1c] font-bold font-rajdhani uppercase tracking-wide transition-all active:scale-95"
             >
               Submit
             </button>
@@ -611,7 +720,7 @@ export default function GamePage() {
           />
           <button
             onClick={handleNextOrFinish}
-            className="w-full py-3 rounded-2xl bg-[#f6c90e] text-[#070e1c] font-bold font-orbitron uppercase tracking-wide transition-all active:scale-95"
+            className="w-full py-3 rounded-2xl bg-[#f6c90e] text-[#070e1c] font-bold font-rajdhani uppercase tracking-wide transition-all active:scale-95"
           >
             {round === 0 ? 'Next: Letters Round 2 →' : 'Next: Numbers Round →'}
           </button>
@@ -623,7 +732,7 @@ export default function GamePage() {
           <NumberRoundResultPanel result={state.numberResult!} />
           <button
             onClick={handleNextOrFinish}
-            className="w-full py-3 rounded-2xl bg-[#f6c90e] text-[#070e1c] font-bold font-orbitron uppercase tracking-wide transition-all active:scale-95"
+            className="w-full py-3 rounded-2xl bg-[#f6c90e] text-[#070e1c] font-bold font-rajdhani uppercase tracking-wide transition-all active:scale-95"
           >
             See Final Results →
           </button>

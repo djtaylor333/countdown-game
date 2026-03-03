@@ -84,9 +84,9 @@ body {
 .animate-slide-up    { animation: slide-up 0.3s ease forwards; }
 .animate-fade-in     { animation: fade-in 0.4s ease forwards; }
 
-/* Orbitron for numeric displays */
-.font-orbitron {
-  font-family: var(--font-orbitron), monospace;
+/* Rajdhani for display + numeric */
+.font-rajdhani {
+  font-family: var(--font-rajdhani), monospace;
 }
 
 /* Letter tile styles */
@@ -95,7 +95,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-orbitron), monospace;
+  font-family: var(--font-rajdhani), monospace;
   font-weight: 700;
   border-radius: 6px;
   cursor: pointer;
@@ -129,7 +129,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-orbitron), monospace;
+  font-family: var(--font-rajdhani), monospace;
   font-weight: 700;
   border-radius: 8px;
   cursor: pointer;

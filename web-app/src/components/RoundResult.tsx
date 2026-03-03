@@ -34,7 +34,7 @@ export function LetterRoundResultPanel({ result, roundNum }: { result: LetterRou
         <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide">
           Letters Round {roundNum}
         </h3>
-        <span className={`text-sm font-bold font-orbitron ${pct === 100 ? 'text-green-400' : pct >= 70 ? 'text-[#f6c90e]' : 'text-slate-300'}`}>
+        <span className={`text-sm font-bold font-rajdhani ${pct === 100 ? 'text-green-400' : pct >= 70 ? 'text-[#f6c90e]' : 'text-slate-300'}`}>
           {result.userScore}/{result.maxPossibleScore}
         </span>
       </div>
@@ -43,7 +43,7 @@ export function LetterRoundResultPanel({ result, roundNum }: { result: LetterRou
       <div className="flex flex-col gap-1">
         <p className="text-xs text-slate-500 uppercase tracking-wide">Your word</p>
         <div className={`flex items-center gap-2 rounded-xl px-4 py-2 border ${result.userWordValid ? 'border-green-500/50 bg-green-500/10' : 'border-red-500/50 bg-red-500/10'}`}>
-          <span className="font-orbitron font-bold text-lg tracking-widest">
+          <span className="font-rajdhani font-bold text-lg tracking-widest">
             {result.userWord || '—'}
           </span>
           <span className="ml-auto text-lg">
@@ -62,7 +62,7 @@ export function LetterRoundResultPanel({ result, roundNum }: { result: LetterRou
             {bestWords.slice(0, 4).map((w, i) => (
               <div key={`${w.word}-${i}`} className={`rounded-xl p-3 border transition-all ${i === 0 ? 'border-[#f6c90e]/50 bg-[#f6c90e]/5' : 'border-[#1a3560] bg-[#0a1628]'}`}>
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="font-orbitron font-bold text-base tracking-widest text-[#f6c90e]">
+                  <span className="font-rajdhani font-bold text-base tracking-widest text-[#f6c90e]">
                     {w.word}
                   </span>
                   <span className="text-xs text-slate-500">({w.word.length} pts)</span>
@@ -98,7 +98,7 @@ export function NumberRoundResultPanel({ result }: { result: NumberRoundResult }
         <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide">
           Numbers Round
         </h3>
-        <span className={`text-sm font-bold font-orbitron ${result.userScore === 10 ? 'text-green-400' : result.userScore > 0 ? 'text-[#f6c90e]' : 'text-slate-400'}`}>
+        <span className={`text-sm font-bold font-rajdhani ${result.userScore === 10 ? 'text-green-400' : result.userScore > 0 ? 'text-[#f6c90e]' : 'text-slate-400'}`}>
           {result.userScore}/10
         </span>
       </div>
@@ -106,7 +106,7 @@ export function NumberRoundResultPanel({ result }: { result: NumberRoundResult }
       {/* Target */}
       <div className="flex items-center gap-3">
         <span className="text-xs text-slate-500 uppercase tracking-wide">Target:</span>
-        <span className="font-orbitron font-black text-2xl text-[#f6c90e]">{result.target}</span>
+        <span className="font-rajdhani font-black text-2xl text-[#f6c90e]">{result.target}</span>
       </div>
 
       {/* User result */}
@@ -114,11 +114,11 @@ export function NumberRoundResultPanel({ result }: { result: NumberRoundResult }
         <p className="text-xs text-slate-500 uppercase tracking-wide">Your answer</p>
         {result.userResult !== null && result.userSteps.length > 0 ? (
           <div className={`rounded-xl px-4 py-3 border ${result.userScore === 10 ? 'border-green-500/50 bg-green-500/10' : result.userScore > 0 ? 'border-yellow-500/50 bg-yellow-500/10' : 'border-[#1a3560] bg-[#0a1628]'}`}>
-            <p className="text-sm font-orbitron text-slate-300 whitespace-pre-wrap">
+            <p className="text-sm font-rajdhani text-slate-300 whitespace-pre-wrap">
               {formatSolution(result.userSteps)}
             </p>
             <div className="flex items-center gap-2 mt-2">
-              <span className="font-orbitron font-bold text-lg text-white">{result.userResult}</span>
+              <span className="font-rajdhani font-bold text-lg text-white">{result.userResult}</span>
               {diffDisplay !== null && diffDisplay > 0 && (
                 <span className="text-sm text-yellow-400">({diffDisplay} away)</span>
               )}
@@ -137,10 +137,10 @@ export function NumberRoundResultPanel({ result }: { result: NumberRoundResult }
         <div className="flex flex-col gap-1">
           <p className="text-xs text-slate-500 uppercase tracking-wide">Solution</p>
           <div className="rounded-xl px-4 py-3 border border-[#f6c90e]/30 bg-[#f6c90e]/5">
-            <p className="text-sm font-orbitron text-slate-200 whitespace-pre-wrap">
+            <p className="text-sm font-rajdhani text-slate-200 whitespace-pre-wrap">
               {formatSolution(result.solution)}
             </p>
-            <span className="font-orbitron font-bold text-lg text-[#f6c90e] mt-1 block">
+            <span className="font-rajdhani font-bold text-lg text-[#f6c90e] mt-1 block">
               = {result.solution[result.solution.length - 1].result}
             </span>
           </div>

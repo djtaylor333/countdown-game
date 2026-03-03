@@ -73,7 +73,12 @@ fun GameScreen(
                 label = "phase"
             ) { phase ->
                 when (phase) {
-                    GamePhase.SELECTING -> SelectingPhase(state = state, onReady = viewModel::startCountdown)
+                    GamePhase.SELECTING -> SelectingPhase(
+                        state       = state,
+                        onReady     = viewModel::startCountdown,
+                        onPickLarge = viewModel::pickLargeNumber,
+                        onPickSmall = viewModel::pickSmallNumber
+                    )
                     GamePhase.COUNTDOWN -> CountdownPhase(state.countdownValue)
                     GamePhase.PLAYING   -> if (state.isLettersRound)
                         LettersPlayingPhase(state = state, viewModel = viewModel)
@@ -152,7 +157,12 @@ private fun GameTopBar(
 // ── Selecting phase ────────────────────────────────────────────────────────────
 
 @Composable
-private fun SelectingPhase(state: GameUiState, onReady: () -> Unit) {
+private fun SelectingPhase(
+    state: GameUiState,
+    onReady: () -> Unit,
+    onPickLarge: () -> Unit = {},
+    onPickSmall: () -> Unit = {}
+) {
     Column(
         modifier            = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -164,25 +174,110 @@ private fun SelectingPhase(state: GameUiState, onReady: () -> Unit) {
             Spacer(Modifier.height(24.dp))
             LetterTileRow(letters = letters.map { it.toString() }, selectedIndices = emptySet())
         } else {
-            Text("Today's Numbers", color = TextSecondary, fontSize = 14.sp)
-            Spacer(Modifier.height(24.dp))
-            NumberTileRow(numbers = state.numbers, usedIndices = emptySet(), onTap = {})
-            Spacer(Modifier.height(16.dp))
+            // Numbers round — interactive picker
+            Text("Pick your 6 numbers", color = TextSecondary, fontSize = 14.sp)
             Text(
-                text       = "Target: ${state.target}",
-                fontSize   = 32.sp,
+                text      = "${state.pickedNumbers.size}/6 chosen  •  up to 4 large",
+                fontSize  = 12.sp,
+                color     = TextMuted
+            )
+            Spacer(Modifier.height(16.dp))
+
+            // Target
+            Text("Target", color = TextSecondary, fontSize = 12.sp)
+            Text(
+                text       = state.target.toString(),
+                fontSize   = 40.sp,
                 fontWeight = FontWeight.Black,
                 color      = Gold
             )
+            Spacer(Modifier.height(16.dp))
+
+            // Picked number tiles
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.padding(horizontal = 8.dp)
+            ) {
+                val largeTile = setOf(25, 50, 75, 100)
+                repeat(6) { idx ->
+                    if (idx < state.pickedNumbers.size) {
+                        val n       = state.pickedNumbers[idx]
+                        val isLarge = n in largeTile
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(
+                                    if (isLarge) NavyDeep else NavyDark,
+                                    RoundedCornerShape(10.dp)
+                                )
+                                .border(2.dp, if (isLarge) Gold else TileBlueBorder, RoundedCornerShape(10.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text       = n.toString(),
+                                fontSize   = if (n >= 100) 11.sp else 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color      = if (isLarge) Gold else TextPrimary
+                            )
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .border(2.dp, color = TextMuted, shape = RoundedCornerShape(10.dp))
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(24.dp))
+
+            // Large / Small buttons
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                val largeUsed   = state.pickedNumbers.count { it in setOf(25, 50, 75, 100) }
+                val canLarge    = state.pickedNumbers.size < 6 && state.numLargePool.isNotEmpty() && largeUsed < 4
+                val canSmall    = state.pickedNumbers.size < 6 && state.numSmallPool.isNotEmpty()
+
+                Button(
+                    onClick  = onPickLarge,
+                    enabled  = canLarge,
+                    colors   = ButtonDefaults.buttonColors(containerColor = if (canLarge) NavyDark else NavyDeep, contentColor = Gold),
+                    shape    = RoundedCornerShape(12.dp),
+                    modifier = Modifier.height(60.dp).width(120.dp)
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("25–100", fontWeight = FontWeight.Black, fontSize = 14.sp)
+                        Text("Large", fontSize = 11.sp)
+                    }
+                }
+
+                Button(
+                    onClick  = onPickSmall,
+                    enabled  = canSmall,
+                    colors   = ButtonDefaults.buttonColors(containerColor = if (canSmall) Navy else NavyDeep, contentColor = TextPrimary),
+                    shape    = RoundedCornerShape(12.dp),
+                    modifier = Modifier.height(60.dp).width(120.dp)
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("1–10", fontWeight = FontWeight.Black, fontSize = 14.sp)
+                        Text("Small", fontSize = 11.sp)
+                    }
+                }
+            }
         }
-        Spacer(Modifier.height(48.dp))
+        Spacer(Modifier.height(32.dp))
         Button(
-            onClick = onReady,
-            colors  = ButtonDefaults.buttonColors(containerColor = Gold),
-            shape   = RoundedCornerShape(16.dp),
+            onClick  = onReady,
+            enabled  = if (state.isLettersRound) true else state.pickedNumbers.size == 6,
+            colors   = ButtonDefaults.buttonColors(containerColor = Gold),
+            shape    = RoundedCornerShape(16.dp),
             modifier = Modifier.fillMaxWidth(0.6f).height(52.dp)
         ) {
-            Text("Ready!", fontWeight = FontWeight.Bold, color = NavyDeep, fontSize = 16.sp)
+            Text(
+                if (state.isLettersRound) "Ready!" else "Start Round",
+                fontWeight = FontWeight.Bold,
+                color      = NavyDeep,
+                fontSize   = 16.sp
+            )
         }
     }
 }

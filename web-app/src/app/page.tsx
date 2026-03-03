@@ -35,7 +35,7 @@ export default function HomePage() {
     <main className="min-h-screen flex flex-col items-center px-4 py-8 max-w-md mx-auto">
       {/* Logo header */}
       <div className="flex flex-col items-center gap-1 mb-8 mt-4">
-        <h1 className="font-orbitron font-black text-5xl tracking-tight text-white">
+        <h1 className="font-rajdhani font-black text-5xl tracking-tight text-white">
           COUNT<span className="text-[#f6c90e]">DOWN</span>
         </h1>
         <p className="text-sm text-slate-400 tracking-wide">{formattedDate}</p>
@@ -52,7 +52,7 @@ export default function HomePage() {
       <section className="w-full rounded-2xl bg-[#0f1f38] border border-[#1a3560] p-6 flex flex-col gap-5">
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="font-orbitron font-bold text-lg text-white">Today&apos;s Game</h2>
+            <h2 className="font-rajdhani font-bold text-lg text-white">Today&apos;s Game</h2>
             <p className="text-sm text-slate-400 mt-0.5">2 Letters Rounds · 1 Numbers Round</p>
           </div>
           {alreadyPlayed && (
@@ -73,7 +73,7 @@ export default function HomePage() {
         {alreadyPlayed && todayResult && (
           <div className="rounded-xl bg-[#0a1628] px-4 py-3 flex items-center justify-between">
             <span className="text-sm text-slate-400">Today&apos;s Score</span>
-            <span className="font-orbitron font-bold text-xl text-[#f6c90e]">
+            <span className="font-rajdhani font-bold text-xl text-[#f6c90e]">
               {todayResult.totalScore}
               <span className="text-sm text-slate-500 font-normal ml-1">pts</span>
             </span>
@@ -85,7 +85,7 @@ export default function HomePage() {
           <div className="flex flex-col gap-2">
             <Link
               href="/results"
-              className="w-full text-center py-3 rounded-2xl bg-[#f6c90e] text-[#070e1c] font-bold font-orbitron uppercase tracking-wide transition-all active:scale-95 hover:bg-[#fdd835]"
+              className="w-full text-center py-3 rounded-2xl bg-[#f6c90e] text-[#070e1c] font-bold font-rajdhani uppercase tracking-wide transition-all active:scale-95 hover:bg-[#fdd835]"
             >
               View Today&apos;s Results
             </Link>
@@ -99,7 +99,7 @@ export default function HomePage() {
         ) : (
           <Link
             href="/game"
-            className="w-full text-center py-3 rounded-2xl bg-[#f6c90e] text-[#070e1c] font-bold font-orbitron uppercase tracking-wide transition-all active:scale-95 hover:bg-[#fdd835] text-lg"
+            className="w-full text-center py-3 rounded-2xl bg-[#f6c90e] text-[#070e1c] font-bold font-rajdhani uppercase tracking-wide transition-all active:scale-95 hover:bg-[#fdd835] text-lg"
           >
             Play Today&apos;s Game
           </Link>

@@ -23,7 +23,7 @@ export default function OperationButton({ op, selected, onClick, disabled }: Pro
       disabled={disabled}
       aria-pressed={selected}
       className={`
-        w-12 h-12 rounded-xl font-orbitron font-bold text-xl select-none
+        w-12 h-12 rounded-xl font-rajdhani font-bold text-xl select-none
         transition-all duration-120 active:scale-90
         ${selected
           ? 'bg-[#f6c90e] text-[#070e1c] shadow-[0_0_14px_rgba(246,201,14,0.5)] scale-105'

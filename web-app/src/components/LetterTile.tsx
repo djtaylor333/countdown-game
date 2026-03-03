@@ -18,7 +18,7 @@ const sizeMap = {
 
 export default function LetterTile({ letter, index, used, selected, size = 'md', onClick, animDelay = 0 }: Props) {
   const sizeClass = sizeMap[size];
-  const baseClass = `letter-tile ${sizeClass} font-orbitron font-bold rounded-md select-none`;
+  const baseClass = `letter-tile ${sizeClass} font-rajdhani font-bold rounded-md select-none`;
   const stateClass = selected ? 'selected' : used ? 'used' : '';
   const animClass = letter ? 'animate-tile-drop' : '';
 

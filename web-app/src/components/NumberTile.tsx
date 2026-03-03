@@ -26,7 +26,7 @@ export default function NumberTile({ value, index, used, isLarge, onClick, size 
 
   return (
     <button
-      className={`${typeClass} ${sizeClass} ${usedClass} ${animClass} font-orbitron font-bold rounded-xl select-none`}
+      className={`${typeClass} ${sizeClass} ${usedClass} ${animClass} font-rajdhani font-bold rounded-xl select-none`}
       style={{ animationDelay: `${animDelay}ms` }}
       onClick={() => !used && onClick?.(index)}
       disabled={used}

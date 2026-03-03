@@ -29,9 +29,10 @@ export default {
         neutral:    '#64748b',
       },
       fontFamily: {
-        display: ['Orbitron', 'monospace'],
-        body:    ['Inter', 'sans-serif'],
-        mono:    ['JetBrains Mono', 'monospace'],
+        display:  ['Rajdhani', 'sans-serif'],
+        rajdhani: ['Rajdhani', 'sans-serif'],
+        body:     ['Inter', 'sans-serif'],
+        mono:     ['JetBrains Mono', 'monospace'],
       },
       animation: {
         'tile-flip':    'tileFlip 0.4s ease-in-out',

@@ -14,7 +14,7 @@ data class GameUiState(
     val challenge: DailyChallenge? = null,
 
     // ── Timer ─────────────────────────────────────────────────────────────────
-    val timeRemaining: Int      = 30,   // seconds
+    val timeRemaining: Int      = 60,   // seconds
     val countdownValue: Int     = 3,    // 3-2-1 pre-round countdown
 
     // ── Letters round state ───────────────────────────────────────────────────
@@ -39,6 +39,11 @@ data class GameUiState(
     val numbersResult: Int?            = null,   // user's final value
     val numbersScore: Int              = 0,
     val solution: List<EquationStep>?  = null,   // solver's answer
+
+    // ── Numbers picker (selecting phase) ──────────────────────────────────────
+    val pickedNumbers: List<Int>       = emptyList(),
+    val numLargePool: List<Int>        = listOf(25, 50, 75, 100).shuffled(),
+    val numSmallPool: List<Int>        = listOf(1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10).shuffled(),
 
     // ── Completed round results (for summary) ─────────────────────────────────
     val letterResult1: LetterRoundResult? = null,
