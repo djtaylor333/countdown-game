@@ -112,7 +112,7 @@ export default function HomePage() {
         <ul className="flex flex-col gap-2 text-sm text-slate-400">
           <li className="flex gap-2">
             <span className="text-[#f6c90e]">🔤</span>
-            <span><strong className="text-slate-300">Letters Round:</strong> Pick 9 letters, find the longest word in 30 seconds.</span>
+            <span><strong className="text-slate-300">Letters Round:</strong> Pick 9 letters, find the longest word in 60 seconds.</span>
           </li>
           <li className="flex gap-2">
             <span className="text-[#f6c90e]">🔢</span>
@@ -123,6 +123,35 @@ export default function HomePage() {
             <span>One new puzzle per day, shared by everyone. Build your streak!</span>
           </li>
         </ul>
+      </section>
+
+      {/* Other modes */}
+      <section className="w-full mt-4 flex flex-col gap-3">
+        <h3 className="font-rajdhani font-bold text-slate-300 text-base uppercase tracking-wide">More Modes</h3>
+
+        {/* Practice mode */}
+        <Link
+          href="/game?mode=practice"
+          className="w-full rounded-2xl bg-[#0f1f38] border border-[#1a3560] p-5 flex items-center justify-between hover:border-[#f6c90e]/40 transition-colors"
+        >
+          <div>
+            <h3 className="font-rajdhani font-bold text-white text-lg">Practice Mode</h3>
+            <p className="text-xs text-slate-400 mt-0.5">2 Letters · 1 Numbers · No Timer · Epoch-seeded</p>
+          </div>
+          <span className="text-2xl">🎯</span>
+        </Link>
+
+        {/* Full game mode */}
+        <Link
+          href="/game?mode=full"
+          className="w-full rounded-2xl bg-[#0f1f38] border border-[#1a3560] p-5 flex items-center justify-between hover:border-[#f6c90e]/40 transition-colors"
+        >
+          <div>
+            <h3 className="font-rajdhani font-bold text-white text-lg">Full Game</h3>
+            <p className="text-xs text-slate-400 mt-0.5">6 Letters · 3 Numbers · 9 Rounds · Real Countdown Format</p>
+          </div>
+          <span className="text-2xl">🏆</span>
+        </Link>
       </section>
 
       <footer className="mt-auto pt-8 text-xs text-slate-600 text-center">

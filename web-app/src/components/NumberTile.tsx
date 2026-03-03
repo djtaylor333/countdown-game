@@ -11,9 +11,9 @@ interface Props {
 }
 
 const sizeMap = {
-  sm: 'w-10 h-10 text-sm',
-  md: 'w-12 h-12 text-base',
-  lg: 'w-14 h-14 text-lg',
+  sm: 'w-11 h-11 text-base',
+  md: 'w-13 h-13 text-lg',
+  lg: 'w-16 h-16 text-2xl',
 };
 
 export default function NumberTile({ value, index, used, isLarge, onClick, size = 'md', animDelay = 0 }: Props) {
@@ -26,7 +26,7 @@ export default function NumberTile({ value, index, used, isLarge, onClick, size 
 
   return (
     <button
-      className={`${typeClass} ${sizeClass} ${usedClass} ${animClass} font-rajdhani font-bold rounded-xl select-none`}
+      className={`${typeClass} ${sizeClass} ${usedClass} ${animClass} font-tile rounded-xl select-none`}
       style={{ animationDelay: `${animDelay}ms` }}
       onClick={() => !used && onClick?.(index)}
       disabled={used}

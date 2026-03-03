@@ -1,6 +1,8 @@
 package com.djtaylor.countdowngame.domain.engine
 
 import com.djtaylor.countdowngame.domain.model.DailyChallenge
+import com.djtaylor.countdowngame.domain.model.GameMode
+import com.djtaylor.countdowngame.domain.model.RoundDef
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -73,4 +75,59 @@ object DailyChallengeEngine {
 
     /** Shortcut — today's challenge. */
     fun getTodaysChallenge(): DailyChallenge = getDailyChallenge(getTodayKey())
+
+    // ── Practice / Full-game round generation (epoch-seeded) ─────────────────
+
+    /**
+     * Convert a daily challenge into RoundDef list (for mode parity in GameViewModel).
+     */
+    fun dailyToRoundDefs(challenge: DailyChallenge): List<RoundDef> {
+        val seed = dateToSeed(challenge.dateKey)
+        return listOf(
+            RoundDef(type = GameMode.LETTERS, deckSeed = seed.toLong()),
+            RoundDef(type = GameMode.LETTERS, deckSeed = (seed + 100).toLong()),
+            RoundDef(type = GameMode.NUMBERS,
+                target     = challenge.target,
+                numsSeed   = (seed + 300).toLong(),
+                largeCount = challenge.largeCount)
+        )
+    }
+
+    private fun makeLettersRoundDef(seed: Long, vowelCount: Int = 4): RoundDef =
+        RoundDef(type = GameMode.LETTERS, deckSeed = seed, largeCount = vowelCount)
+
+    private fun makeNumbersRoundDef(seed: Long): RoundDef {
+        val largeSeed = (seed and 0x7FFFFFFFL).toInt()
+        val lc = seededInt(largeSeed, 0, 4)
+        val target = NumbersEngine.generateTarget((seed + 999L and 0x7FFFFFFFL).toInt())
+        return RoundDef(type = GameMode.NUMBERS, numsSeed = seed, target = target, largeCount = lc)
+    }
+
+    /**
+     * Generate round definitions for a 3-round practice session.
+     * Format mirrors daily: Letters, Letters, Numbers.
+     * [seed] defaults to current epoch ms for fresh randomness.
+     */
+    fun generatePracticeRoundDefs(seed: Long = System.currentTimeMillis()): List<RoundDef> = listOf(
+        makeLettersRoundDef(seed,           vowelCount = 4),
+        makeLettersRoundDef(seed + 1000L,   vowelCount = 3),
+        makeNumbersRoundDef(seed + 2000L)
+    )
+
+    /**
+     * Generate round definitions for a 9-round full-game session.
+     * Real Countdown format: 6 letters rounds alternating with 3 numbers rounds.
+     * Pattern: L L N L L N L L N
+     * [seed] defaults to current epoch ms for fresh randomness.
+     */
+    fun generateFullGameRoundDefs(seed: Long = System.currentTimeMillis()): List<RoundDef> {
+        var s = seed
+        val defs = mutableListOf<RoundDef>()
+        repeat(3) {
+            defs += makeLettersRoundDef(s, vowelCount = 4);      s += 1000L
+            defs += makeLettersRoundDef(s, vowelCount = 3);      s += 1000L
+            defs += makeNumbersRoundDef(s);                      s += 1000L
+        }
+        return defs
+    }
 }

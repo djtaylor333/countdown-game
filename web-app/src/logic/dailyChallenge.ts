@@ -57,3 +57,80 @@ export function getDailyChallenge(dateKey: string): DailyChallenge {
 export function getTodaysChallenge(): DailyChallenge {
   return getDailyChallenge(getTodayKey());
 }
+
+// ── Round definitions for Practice and Full Game modes ───────────────────────
+
+export interface RoundDef {
+  type: 'letters' | 'numbers';
+  /** Epoch-based seed for letter deck shuffling (letters rounds only) */
+  deckSeed: number;
+  /** Generated target number (numbers rounds only) */
+  target: number;
+  /** Seed for shuffling the number pools (numbers rounds only) */
+  numsSeed: number;
+  /** How many large numbers (25-100) to include (numbers rounds only) */
+  largeCount: number;
+}
+
+function seededInt(s: number, min: number, max: number): number {
+  const rng = ((s * 1664525 + 1013904223) >>> 0) / 0x100000000;
+  return min + Math.floor(rng * (max - min + 1));
+}
+
+/**
+ * Build a single numbers RoundDef seeded from the given seed offset.
+ */
+function makeNumbersRoundDef(seedBase: number): RoundDef {
+  return {
+    type: 'numbers',
+    deckSeed: 0,
+    target: generateTarget(seedBase),
+    numsSeed: seedBase + 500,
+    largeCount: seededInt(seedBase + 700, 0, 4),
+  };
+}
+
+/**
+ * Generate round definitions for Practice Mode: 2 letters + 1 numbers.
+ * Uses epoch timestamp as seed so every practice game is unique.
+ */
+export function generatePracticeRoundDefs(seed?: number): RoundDef[] {
+  const s = seed ?? Date.now();
+  return [
+    { type: 'letters', deckSeed: s,        target: 0, numsSeed: 0, largeCount: 0 },
+    { type: 'letters', deckSeed: s + 1000, target: 0, numsSeed: 0, largeCount: 0 },
+    makeNumbersRoundDef(s + 2000),
+  ];
+}
+
+/**
+ * Generate round definitions for Full Game Mode: 6 letters + 3 numbers (9 rounds).
+ * Modelled on the real Countdown show format.
+ * Uses epoch timestamp as seed so every full game is unique.
+ */
+export function generateFullGameRoundDefs(seed?: number): RoundDef[] {
+  const s = seed ?? Date.now();
+  return [
+    { type: 'letters', deckSeed: s,        target: 0, numsSeed: 0, largeCount: 0 },
+    { type: 'letters', deckSeed: s + 1000, target: 0, numsSeed: 0, largeCount: 0 },
+    { type: 'letters', deckSeed: s + 2000, target: 0, numsSeed: 0, largeCount: 0 },
+    { type: 'letters', deckSeed: s + 3000, target: 0, numsSeed: 0, largeCount: 0 },
+    { type: 'letters', deckSeed: s + 4000, target: 0, numsSeed: 0, largeCount: 0 },
+    { type: 'letters', deckSeed: s + 5000, target: 0, numsSeed: 0, largeCount: 0 },
+    makeNumbersRoundDef(s + 6000),
+    makeNumbersRoundDef(s + 8000),
+    makeNumbersRoundDef(s + 10000),
+  ];
+}
+
+/**
+ * Build daily mode round defs from an existing DailyChallenge.
+ */
+export function dailyToRoundDefs(challenge: DailyChallenge): RoundDef[] {
+  const seed = dateToSeed(challenge.dateKey);
+  return [
+    { type: 'letters', deckSeed: seed,       target: 0, numsSeed: 0,      largeCount: 0 },
+    { type: 'letters', deckSeed: seed + 100, target: 0, numsSeed: 0,      largeCount: 0 },
+    { type: 'numbers', deckSeed: 0,          target: challenge.target, numsSeed: seed + 300, largeCount: challenge.largeCount },
+  ];
+}

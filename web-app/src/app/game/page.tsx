@@ -1,9 +1,16 @@
 ﻿'use client';
 
-import { useEffect, useCallback, useReducer, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useCallback, useReducer, useRef, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { getTodaysChallenge, getTodayKey } from '../../logic/dailyChallenge';
+import {
+  getTodaysChallenge,
+  getTodayKey,
+  generatePracticeRoundDefs,
+  generateFullGameRoundDefs,
+  dailyToRoundDefs,
+  type RoundDef,
+} from '../../logic/dailyChallenge';
 import { isValidWord, findBestWords, scoreLetterRound, pickVowel, pickConsonant, resetDecks } from '../../logic/letters';
 import { solveNumbers, scoreNumbersRound } from '../../logic/numbers';
 import { recordDailyPlay } from '../../logic/streak';
@@ -24,24 +31,38 @@ import { LetterRoundResultPanel, NumberRoundResultPanel } from '../../components
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+export type AppMode = 'daily' | 'practice' | 'full';
+
 const LARGE_POOL_SRC = [25, 50, 75, 100];
 const SMALL_POOL_SRC = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10];
 
-function shuffleArray<T>(arr: T[]): T[] {
+/** Seeded Fisher-Yates — pass seed for deterministic results, omit for epoch-random */
+function shuffleArray<T>(arr: T[], seed?: number): T[] {
   const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
+  if (seed !== undefined) {
+    let s = seed >>> 0;
+    for (let i = a.length - 1; i > 0; i--) {
+      s = (Math.imul(1664525, s) + 1013904223) >>> 0;
+      const j = Math.floor((s / 0x100000000) * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+  } else {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
   }
   return a;
 }
 
 type RoundPhase = 'selecting' | 'countdown' | 'playing' | 'submitting' | 'results';
-type Round = 0 | 1 | 2; // 0=letters1, 1=letters2, 2=numbers
 
 interface GameState {
-  challenge: DailyChallenge;
-  round: Round;
+  mode: AppMode;
+  timerEnabled: boolean;
+  dailyChallenge: DailyChallenge | null;
+  roundDefs: RoundDef[];
+  roundIndex: number;
   phase: RoundPhase;
   countdownVal: number;
   timeRemaining: number;
@@ -49,21 +70,19 @@ interface GameState {
   revealedLetters: string[];
   vowelCount: number;
   consonantCount: number;
-  wordIndices: number[];      // indices into revealedLetters for current word
+  wordIndices: number[];
   submittedWord: string;
   // Numbers
   steps: EquationStep[];
-  availableNumbers: number[];  // changes as steps complete
+  availableNumbers: number[];
   currentLeft: number | null;
   currentOp: Operation | null;
   // Numbers picker (selecting phase)
   pickedNumbers: number[];
   numLargePool: number[];
   numSmallPool: number[];
-  // Results
-  letterResult1: LetterRoundResult | null;
-  letterResult2: LetterRoundResult | null;
-  numberResult: NumberRoundResult | null;
+  // Results — one entry per round
+  results: (LetterRoundResult | NumberRoundResult | null)[];
 }
 
 type GameAction =
@@ -89,10 +108,41 @@ type GameAction =
   | { type: 'SET_NUMBER_RESULT'; result: NumberRoundResult }
   | { type: 'NEXT_ROUND' };
 
-function initState(challenge: DailyChallenge): GameState {
+function makeInitialNumberPools(def: RoundDef | undefined): { large: number[]; small: number[] } {
+  if (def?.type === 'numbers') {
+    return {
+      large: shuffleArray(LARGE_POOL_SRC, def.numsSeed),
+      small: shuffleArray(SMALL_POOL_SRC, def.numsSeed + 1),
+    };
+  }
   return {
-    challenge,
-    round: 0,
+    large: shuffleArray(LARGE_POOL_SRC, Date.now()),
+    small: shuffleArray(SMALL_POOL_SRC, Date.now() + 1),
+  };
+}
+
+function initState(mode: AppMode): GameState {
+  const seed = Date.now();
+  let roundDefs: RoundDef[];
+  let dailyChallenge: DailyChallenge | null = null;
+
+  if (mode === 'daily') {
+    dailyChallenge = getTodaysChallenge();
+    roundDefs = dailyToRoundDefs(dailyChallenge);
+  } else if (mode === 'practice') {
+    roundDefs = generatePracticeRoundDefs(seed);
+  } else {
+    roundDefs = generateFullGameRoundDefs(seed);
+  }
+
+  const { large, small } = makeInitialNumberPools(roundDefs[0]);
+
+  return {
+    mode,
+    timerEnabled: mode !== 'practice',
+    dailyChallenge,
+    roundDefs,
+    roundIndex: 0,
     phase: 'selecting',
     countdownVal: 3,
     timeRemaining: 60,
@@ -106,11 +156,9 @@ function initState(challenge: DailyChallenge): GameState {
     currentLeft: null,
     currentOp: null,
     pickedNumbers: [],
-    numLargePool: shuffleArray(LARGE_POOL_SRC),
-    numSmallPool: shuffleArray(SMALL_POOL_SRC),
-    letterResult1: null,
-    letterResult2: null,
-    numberResult: null,
+    numLargePool: large,
+    numSmallPool: small,
+    results: Array(roundDefs.length).fill(null) as null[],
   };
 }
 
@@ -130,13 +178,15 @@ function reducer(state: GameState, action: GameAction): GameState {
     case 'TICK_COUNTDOWN':
       return { ...state, countdownVal: Math.max(0, state.countdownVal - 1) };
 
-    case 'START_PLAYING':
+    case 'START_PLAYING': {
+      const isNumbers = state.roundDefs[state.roundIndex]?.type === 'numbers';
       return {
         ...state,
         phase: 'playing',
         timeRemaining: 60,
-        availableNumbers: state.round === 2 ? [...state.pickedNumbers] : state.availableNumbers,
+        availableNumbers: isNumbers ? [...state.pickedNumbers] : state.availableNumbers,
       };
+    }
 
     case 'TICK_TIMER':
       return { ...state, timeRemaining: Math.max(0, state.timeRemaining - 1) };
@@ -164,13 +214,11 @@ function reducer(state: GameState, action: GameAction): GameState {
         timeRemaining: 0,
       };
 
-    case 'SET_LETTER_RESULT':
-      return {
-        ...state,
-        phase: 'results',
-        letterResult1: state.round === 0 ? action.result : state.letterResult1,
-        letterResult2: state.round === 1 ? action.result : state.letterResult2,
-      };
+    case 'SET_LETTER_RESULT': {
+      const newResults = [...state.results];
+      newResults[state.roundIndex] = action.result;
+      return { ...state, phase: 'results', results: newResults };
+    }
 
     case 'PICK_LEFT':
       return { ...state, currentLeft: action.value, currentOp: null };
@@ -252,14 +300,19 @@ function reducer(state: GameState, action: GameAction): GameState {
     case 'SUBMIT_NUMBERS':
       return { ...state, phase: 'submitting', timeRemaining: 0 };
 
-    case 'SET_NUMBER_RESULT':
-      return { ...state, phase: 'results', numberResult: action.result };
+    case 'SET_NUMBER_RESULT': {
+      const newResults = [...state.results];
+      newResults[state.roundIndex] = action.result;
+      return { ...state, phase: 'results', results: newResults };
+    }
 
     case 'NEXT_ROUND': {
-      const nextRound = (state.round < 2 ? state.round + 1 : state.round) as Round;
+      const nextIdx = state.roundIndex + 1;
+      const nextDef = state.roundDefs[nextIdx];
+      const { large, small } = makeInitialNumberPools(nextDef);
       return {
         ...state,
-        round: nextRound,
+        roundIndex: nextIdx,
         phase: 'selecting',
         countdownVal: 3,
         timeRemaining: 60,
@@ -268,14 +321,13 @@ function reducer(state: GameState, action: GameAction): GameState {
         consonantCount: 0,
         wordIndices: [],
         submittedWord: '',
-        // Re-init numbers round state
         steps: [],
         availableNumbers: [],
         currentLeft: null,
         currentOp: null,
         pickedNumbers: [],
-        numLargePool: shuffleArray(LARGE_POOL_SRC),
-        numSmallPool: shuffleArray(SMALL_POOL_SRC),
+        numLargePool: large,
+        numSmallPool: small,
       };
     }
 
@@ -284,26 +336,58 @@ function reducer(state: GameState, action: GameAction): GameState {
   }
 }
 
-// ── Main component ─────────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
-export default function GamePage() {
+function getRoundLabel(defs: RoundDef[], idx: number): string {
+  const def = defs[idx];
+  if (!def) return '';
+  if (def.type === 'letters') {
+    const n = defs.slice(0, idx + 1).filter(d => d.type === 'letters').length;
+    return `Letters Round ${n}`;
+  }
+  const n = defs.slice(0, idx + 1).filter(d => d.type === 'numbers').length;
+  return `Numbers Round${n > 1 ? ` ${n}` : ''}`;
+}
+
+function getNextButtonLabel(defs: RoundDef[], idx: number): string {
+  const next = defs[idx + 1];
+  if (!next) return 'See Results →';
+  if (next.type === 'letters') {
+    const n = defs.slice(0, idx + 2).filter(d => d.type === 'letters').length;
+    return `Next: Letters Round ${n} →`;
+  }
+  const n = defs.slice(0, idx + 2).filter(d => d.type === 'numbers').length;
+  return `Next: Numbers Round ${n > 1 ? n + ' ' : ''}→`;
+}
+
+// ── Main component (inner — uses useSearchParams) ──────────────────────────────
+
+function GamePageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const mode = (searchParams.get('mode') ?? 'daily') as AppMode;
+
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isValidating, setIsValidating] = useState(false);
 
-  const [state, dispatch] = useReducer(reducer, null, () => {
-    const challenge = getTodaysChallenge();
-    return initState(challenge);
-  });
+  const [state, dispatch] = useReducer(reducer, mode, initState);
 
-  const { challenge, round, phase, countdownVal, timeRemaining } = state;
+  const { phase, countdownVal, timeRemaining } = state;
+  const currentDef = state.roundDefs[state.roundIndex];
+  const isLettersRound = currentDef?.type === 'letters';
+  const isNumbersRound = currentDef?.type === 'numbers';
+  const isLastRound = state.roundIndex >= state.roundDefs.length - 1;
+  const currentTarget = isNumbersRound ? (currentDef?.target ?? 999) : 999;
 
   const LARGE_SET = new Set(state.pickedNumbers.filter(n => [25, 50, 75, 100].includes(n)));
 
   // ── Reset letter decks at the start of each letters round ───────────────
   useEffect(() => {
-    if (round < 2 && phase === 'selecting') resetDecks();
-  }, [round, phase]);
+    if (isLettersRound && phase === 'selecting') {
+      resetDecks(currentDef?.deckSeed);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.roundIndex, phase]);
 
   // ── Countdown (3-2-1) timer ───────────────────────────────────────────────
 
@@ -316,25 +400,24 @@ export default function GamePage() {
   useEffect(() => {
     if (phase === 'countdown' && countdownVal === 0) {
       clearInterval(timerRef.current!);
-      // Brief pause so 'GO!' shows before timer starts
       setTimeout(() => dispatch({ type: 'START_PLAYING' }), 800);
     }
   }, [countdownVal, phase]);
 
-  // ── Play timer ───────────────────────────────────────────────────────────
+  // ── Play timer (only when timer enabled) ─────────────────────────────────
 
   useEffect(() => {
-    if (phase !== 'playing') return;
+    if (phase !== 'playing' || !state.timerEnabled) return;
     timerRef.current = setInterval(() => dispatch({ type: 'TICK_TIMER' }), 1000);
     return () => clearInterval(timerRef.current!);
-  }, [phase]);
+  }, [phase, state.timerEnabled]);
 
   useEffect(() => {
-    if (phase === 'playing' && timeRemaining === 0) {
+    if (phase === 'playing' && timeRemaining === 0 && state.timerEnabled) {
       clearInterval(timerRef.current!);
       dispatch({ type: 'TIMER_EXPIRED' });
     }
-  }, [phase, timeRemaining]);
+  }, [phase, timeRemaining, state.timerEnabled]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -373,7 +456,6 @@ export default function GamePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.wordIndices, state.revealedLetters]);
 
-  // Submit empty word (skip)
   const handleSkipLetterRound = useCallback(async () => {
     const bestWords = await findBestWords(state.revealedLetters, 4);
     const bestLength = bestWords[0]?.word.length ?? 0;
@@ -388,61 +470,62 @@ export default function GamePage() {
   }, [state.revealedLetters]);
 
   function handleSubmitNumbers() {
-    const { steps, challenge: c } = state;
+    const { steps } = state;
     const lastStep = steps[steps.length - 1];
     const userResult = lastStep?.result ?? null;
-    const diff = userResult !== null ? Math.abs(userResult - c.target) : Infinity;
+    const diff = userResult !== null ? Math.abs(userResult - currentTarget) : Infinity;
     const userScore = isFinite(diff) ? scoreNumbersRound(diff) : 0;
 
-    const solutionResult = solveNumbers(state.pickedNumbers, c.target);
+    const solutionResult = solveNumbers(state.pickedNumbers, currentTarget);
 
     const result: NumberRoundResult = {
       userResult,
       userSteps: steps,
       userScore,
       solution: solutionResult.steps.length > 0 ? solutionResult.steps : null,
-      target: c.target,
+      target: currentTarget,
     };
     dispatch({ type: 'SET_NUMBER_RESULT', result });
   }
 
   function handleNextOrFinish() {
-    if (round < 2) {
+    if (!isLastRound) {
       dispatch({ type: 'NEXT_ROUND' });
-    } else {
-      // Save and go to results
-      const { letterResult1, letterResult2, numberResult } = state;
-      const s1 = letterResult1?.userScore ?? 0;
-      const m1 = letterResult1?.maxPossibleScore ?? 9;
-      const s2 = letterResult2?.userScore ?? 0;
-      const m2 = letterResult2?.maxPossibleScore ?? 9;
-      const ns = numberResult?.userScore ?? 0;
+      return;
+    }
 
+    if (state.mode === 'daily') {
+      const letterResults = state.results.filter((_, i) => state.roundDefs[i].type === 'letters') as LetterRoundResult[];
+      const numberResults = state.results.filter((_, i) => state.roundDefs[i].type === 'numbers') as NumberRoundResult[];
+      const lr1 = letterResults[0]; const lr2 = letterResults[1];
+      const nr = numberResults[0];
+      const s1 = lr1?.userScore ?? 0; const m1 = lr1?.maxPossibleScore ?? 9;
+      const s2 = lr2?.userScore ?? 0; const m2 = lr2?.maxPossibleScore ?? 9;
+      const ns = nr?.userScore ?? 0;
       recordDailyPlay({
         dateKey: getTodayKey(),
-        lettersScore1: s1,
-        lettersMax1: m1,
-        letterWord1: letterResult1?.userWordValid ? letterResult1.userWord : undefined,
-        lettersScore2: s2,
-        lettersMax2: m2,
-        letterWord2: letterResult2?.userWordValid ? letterResult2.userWord : undefined,
-        numbersScore: ns,
-        numbersMax: 10,
-        lettersScore: s1 + s2,
-        lettersMax: m1 + m2,
-        totalScore: s1 + s2 + ns,
-        completed: true,
+        lettersScore1: s1, lettersMax1: m1, letterWord1: lr1?.userWordValid ? lr1.userWord : undefined,
+        lettersScore2: s2, lettersMax2: m2, letterWord2: lr2?.userWordValid ? lr2.userWord : undefined,
+        numbersScore: ns, numbersMax: 10,
+        lettersScore: s1 + s2, lettersMax: m1 + m2,
+        totalScore: s1 + s2 + ns, completed: true,
       });
       router.push('/results');
+    } else {
+      sessionStorage.setItem('gameResults', JSON.stringify({
+        mode: state.mode,
+        results: state.results,
+        roundDefs: state.roundDefs,
+      }));
+      router.push('/game-summary');
     }
   }
 
-  // ── Current word derived values ───────────────────────────────────────────
+  // ── Derived values ────────────────────────────────────────────────────────
 
   const wordLetters = state.wordIndices.map(i => state.revealedLetters[i]);
   const usedLetterIndices = state.wordIndices;
 
-  // ── usedOriginalIndices for NumberBoard ──────────────────────────────────
   const usedNumberIndices = new Set<number>();
   {
     const pool = [...state.pickedNumbers];
@@ -455,21 +538,23 @@ export default function GamePage() {
     }
   }
 
-  // ── Render helpers ────────────────────────────────────────────────────────
-
-  const roundLabel = round === 2 ? 'Numbers Round' : `Letters Round ${round + 1}`;
+  const roundLabel = getRoundLabel(state.roundDefs, state.roundIndex);
+  const modeBadge = state.mode === 'practice' ? 'Practice' : state.mode === 'full' ? 'Full Game' : '';
 
   return (
     <main className="min-h-screen flex flex-col items-center px-4 py-4 max-w-md mx-auto gap-4">
       {/* Header */}
       <div className="w-full flex items-center justify-between">
         <Link href="/" className="text-slate-400 hover:text-white transition-colors text-sm">← Home</Link>
-        <span className="font-rajdhani text-sm text-slate-300">{roundLabel}</span>
-        <span className="text-xs text-slate-500">{round + 1}/3</span>
+        <div className="flex flex-col items-center">
+          <span className="font-rajdhani text-sm text-slate-300">{roundLabel}</span>
+          {modeBadge && <span className="text-[10px] text-[#f6c90e] uppercase tracking-widest">{modeBadge}</span>}
+        </div>
+        <span className="text-xs text-slate-500">{state.roundIndex + 1}/{state.roundDefs.length}</span>
       </div>
 
-      {/* ── SELECTING ── */}
-      {phase === 'selecting' && round < 2 && (
+      {/* ── SELECTING — Letters ── */}
+      {phase === 'selecting' && isLettersRound && (
         <div className="w-full flex flex-col gap-6 items-center">
           <p className="text-slate-400 text-sm">Choose your 9 letters</p>
           <LetterBoard
@@ -489,7 +574,7 @@ export default function GamePage() {
         </div>
       )}
 
-      {phase === 'selecting' && round === 2 && (
+      {phase === 'selecting' && isNumbersRound && (
         <div className="w-full flex flex-col gap-5 items-center">
           <div className="text-center">
             <p className="text-slate-300 text-sm font-semibold">Pick your 6 numbers</p>
@@ -503,7 +588,7 @@ export default function GamePage() {
             <p className="text-xs text-slate-400 uppercase tracking-widest">Target</p>
             <div className="bg-[#1a3560] border-2 border-[#f6c90e] rounded-2xl px-8 py-3 shadow-[0_0_20px_rgba(246,201,14,0.25)]">
               <span className="font-rajdhani font-black text-4xl text-[#f6c90e] tracking-wider">
-                {challenge.target}
+                {currentTarget}
               </span>
             </div>
           </div>
@@ -586,9 +671,13 @@ export default function GamePage() {
       )}
 
       {/* ── PLAYING — Letters ── */}
-      {phase === 'playing' && round < 2 && (
+      {phase === 'playing' && isLettersRound && (
         <div className="w-full flex flex-col gap-4">
-          <CountdownClock totalSeconds={60} remaining={timeRemaining} />
+          {state.timerEnabled ? (
+            <CountdownClock totalSeconds={60} remaining={timeRemaining} />
+          ) : (
+            <div className="text-center text-sm text-[#f6c90e] bg-[#1a3560]/40 rounded-xl py-2">Practice Mode — No Time Limit</div>
+          )}
           <LetterBoard
             letters={state.revealedLetters}
             usedIndices={usedLetterIndices}
@@ -602,18 +691,30 @@ export default function GamePage() {
             onClear={() => dispatch({ type: 'CLEAR_WORD' })}
             onSubmit={() => dispatch({ type: 'SUBMIT_WORD' })}
           />
+          {!state.timerEnabled && (
+            <button
+              onClick={() => dispatch({ type: 'TIMER_EXPIRED' })}
+              className="w-full py-3 rounded-2xl border border-[#f6c90e]/30 text-[#f6c90e] font-semibold font-rajdhani transition-all active:scale-95 hover:bg-[#f6c90e]/10"
+            >
+              Done — Submit Word
+            </button>
+          )}
         </div>
       )}
 
       {/* ── PLAYING — Numbers ── */}
-      {phase === 'playing' && round === 2 && (
+      {phase === 'playing' && isNumbersRound && (
         <div className="w-full flex flex-col gap-4">
-          <CountdownClock totalSeconds={60} remaining={timeRemaining} />
+          {state.timerEnabled ? (
+            <CountdownClock totalSeconds={60} remaining={timeRemaining} />
+          ) : (
+            <div className="text-center text-sm text-[#f6c90e] bg-[#1a3560]/40 rounded-xl py-2">Practice Mode — No Time Limit</div>
+          )}
           <NumberBoard
             numbers={state.pickedNumbers}
             largeNumbers={LARGE_SET}
             usedIndices={[...usedNumberIndices]}
-            target={challenge.target}
+            target={currentTarget}
             onPickNumber={() => {}}
             phase="playing"
           />
@@ -624,7 +725,7 @@ export default function GamePage() {
             currentLeft={state.currentLeft}
             currentOp={state.currentOp}
             steps={state.steps}
-            target={challenge.target}
+            target={currentTarget}
             onPickLeft={(n) => dispatch({ type: 'PICK_LEFT', value: n })}
             onPickOp={(op) => dispatch({ type: 'PICK_OP', op })}
             onPickRight={(n) => dispatch({ type: 'PICK_RIGHT', value: n })}
@@ -641,10 +742,10 @@ export default function GamePage() {
       )}
 
       {/* ── SUBMITTING — Letters ── */}
-      {phase === 'submitting' && round < 2 && (
+      {phase === 'submitting' && isLettersRound && (
         <div className="w-full flex flex-col gap-4">
           <p className="text-center text-slate-400">
-            {timeRemaining === 0 ? "Time's up!" : 'Confirm your word'}
+            {!state.timerEnabled ? 'Confirm your word' : timeRemaining === 0 ? "Time's up!" : 'Confirm your word'}
           </p>
           <LetterBoard
             letters={state.revealedLetters}
@@ -674,14 +775,14 @@ export default function GamePage() {
       )}
 
       {/* ── SUBMITTING — Numbers ── */}
-      {phase === 'submitting' && round === 2 && (
+      {phase === 'submitting' && isNumbersRound && (
         <div className="w-full flex flex-col gap-4">
           <p className="text-center text-slate-400">Confirm your answer</p>
           <NumberBoard
             numbers={state.pickedNumbers}
             largeNumbers={LARGE_SET}
             usedIndices={[...usedNumberIndices]}
-            target={challenge.target}
+            target={currentTarget}
             onPickNumber={() => {}}
             phase="playing"
           />
@@ -689,7 +790,7 @@ export default function GamePage() {
             <div className="rounded-xl bg-[#0a1628] border border-[#1a3560] p-3">
               {state.steps.map((s, i) => (
                 <p key={i} className="text-sm font-rajdhani text-slate-300">
-                  {s.left} {s.op} {s.right} = <span className={s.result === challenge.target ? 'text-green-400 font-bold' : 'text-white'}>{s.result}</span>
+                  {s.left} {s.op} {s.right} = <span className={s.result === currentTarget ? 'text-green-400 font-bold' : 'text-white'}>{s.result}</span>
                 </p>
               ))}
             </div>
@@ -712,29 +813,29 @@ export default function GamePage() {
       )}
 
       {/* ── RESULTS ── */}
-      {phase === 'results' && round < 2 && (
+      {phase === 'results' && isLettersRound && (
         <div className="w-full flex flex-col gap-4">
           <LetterRoundResultPanel
-            result={round === 0 ? state.letterResult1! : state.letterResult2!}
-            roundNum={round + 1}
+            result={state.results[state.roundIndex] as LetterRoundResult}
+            roundNum={state.roundDefs.slice(0, state.roundIndex + 1).filter(d => d.type === 'letters').length}
           />
           <button
             onClick={handleNextOrFinish}
             className="w-full py-3 rounded-2xl bg-[#f6c90e] text-[#070e1c] font-bold font-rajdhani uppercase tracking-wide transition-all active:scale-95"
           >
-            {round === 0 ? 'Next: Letters Round 2 →' : 'Next: Numbers Round →'}
+            {getNextButtonLabel(state.roundDefs, state.roundIndex)}
           </button>
         </div>
       )}
 
-      {phase === 'results' && round === 2 && (
+      {phase === 'results' && isNumbersRound && (
         <div className="w-full flex flex-col gap-4">
-          <NumberRoundResultPanel result={state.numberResult!} />
+          <NumberRoundResultPanel result={state.results[state.roundIndex] as NumberRoundResult} />
           <button
             onClick={handleNextOrFinish}
             className="w-full py-3 rounded-2xl bg-[#f6c90e] text-[#070e1c] font-bold font-rajdhani uppercase tracking-wide transition-all active:scale-95"
           >
-            See Final Results →
+            {getNextButtonLabel(state.roundDefs, state.roundIndex)}
           </button>
         </div>
       )}
@@ -742,3 +843,14 @@ export default function GamePage() {
   );
 }
 
+export default function GamePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#070e1c] flex items-center justify-center">
+        <span className="text-slate-400 font-rajdhani">Loading…</span>
+      </div>
+    }>
+      <GamePageContent />
+    </Suspense>
+  );
+}

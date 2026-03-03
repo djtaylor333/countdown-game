@@ -42,27 +42,38 @@ const CONSONANT_POOL: string[] = [
 let vowelDeck = [...VOWEL_POOL];
 let consonantDeck = [...CONSONANT_POOL];
 
-function shuffle<T>(arr: T[]): T[] {
+function shuffle<T>(arr: T[], seed?: number): T[] {
   const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
+  if (seed !== undefined) {
+    // Seeded Fisher-Yates (LCG)
+    let s = seed >>> 0;
+    for (let i = a.length - 1; i > 0; i--) {
+      s = (Math.imul(1664525, s) + 1013904223) >>> 0;
+      const j = Math.floor((s / 0x100000000) * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+  } else {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
   }
   return a;
 }
 
-export function resetDecks(): void {
-  vowelDeck = shuffle([...VOWEL_POOL]);
-  consonantDeck = shuffle([...CONSONANT_POOL]);
+export function resetDecks(seed?: number): void {
+  const s = seed ?? Date.now();
+  vowelDeck = shuffle([...VOWEL_POOL], s);
+  consonantDeck = shuffle([...CONSONANT_POOL], s + 1);
 }
 
 export function pickVowel(): string {
-  if (vowelDeck.length === 0) vowelDeck = shuffle([...VOWEL_POOL]);
+  if (vowelDeck.length === 0) vowelDeck = shuffle([...VOWEL_POOL], Date.now());
   return vowelDeck.pop()!;
 }
 
 export function pickConsonant(): string {
-  if (consonantDeck.length === 0) consonantDeck = shuffle([...CONSONANT_POOL]);
+  if (consonantDeck.length === 0) consonantDeck = shuffle([...CONSONANT_POOL], Date.now() + 1);
   return consonantDeck.pop()!;
 }
 

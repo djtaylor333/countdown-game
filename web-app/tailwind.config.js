@@ -31,6 +31,7 @@ export default {
       fontFamily: {
         display:  ['Rajdhani', 'sans-serif'],
         rajdhani: ['Rajdhani', 'sans-serif'],
+        tile:     ['var(--font-tile)', 'sans-serif'],
         body:     ['Inter', 'sans-serif'],
         mono:     ['JetBrains Mono', 'monospace'],
       },

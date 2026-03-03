@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.djtaylor.countdowngame.domain.engine.LettersEngine
+import com.djtaylor.countdowngame.domain.model.AppMode
+import com.djtaylor.countdowngame.domain.model.GameMode
 import com.djtaylor.countdowngame.domain.model.GamePhase
 import com.djtaylor.countdowngame.domain.model.Operation
 import com.djtaylor.countdowngame.ui.theme.*
@@ -30,14 +32,18 @@ import com.djtaylor.countdowngame.ui.theme.*
 @Composable
 fun GameScreen(
     onGameComplete: () -> Unit,
+    onGameSummary: () -> Unit = {},
     onNavigateHome: () -> Unit,
     viewModel: GameViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    // Navigate to results when all rounds done
+    // Navigate out when all rounds done
     LaunchedEffect(state.phase) {
-        if (state.phase == GamePhase.COMPLETE) onGameComplete()
+        if (state.phase == GamePhase.COMPLETE) {
+            if (state.mode == AppMode.DAILY) onGameComplete()
+            else onGameSummary()
+        }
     }
 
     Box(
@@ -59,6 +65,9 @@ fun GameScreen(
             // ── Top bar ───────────────────────────────────────────────────────
             GameTopBar(
                 roundIndex    = state.currentRound,
+                totalRounds   = state.totalRounds,
+                roundDefs     = state.roundDefs,
+                timerEnabled  = state.timerEnabled,
                 phase         = state.phase,
                 timeRemaining = state.timeRemaining,
                 onHome        = onNavigateHome
@@ -101,11 +110,23 @@ fun GameScreen(
 @Composable
 private fun GameTopBar(
     roundIndex: Int,
+    totalRounds: Int,
+    roundDefs: List<com.djtaylor.countdowngame.domain.model.RoundDef>,
+    timerEnabled: Boolean,
     phase: GamePhase,
     timeRemaining: Int,
     onHome: () -> Unit
 ) {
-    val roundNames = listOf("Letters 1", "Letters 2", "Numbers")
+    // Build dynamic round names from defs if available
+    val roundNames: List<String> = if (roundDefs.isEmpty()) {
+        listOf("Letters 1", "Letters 2", "Numbers")
+    } else {
+        var lIdx = 0; var nIdx = 0
+        roundDefs.map { def ->
+            if (def.type == GameMode.LETTERS) "Letters ${++lIdx}"
+            else "Numbers ${++nIdx}"
+        }
+    }
     Row(
         modifier            = Modifier.fillMaxWidth(),
         verticalAlignment   = Alignment.CenterVertically,
@@ -121,20 +142,30 @@ private fun GameTopBar(
                 color      = Gold,
                 fontSize   = 16.sp
             )
-            // Round progress dots
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                (0..2).forEach { idx ->
+            // Round progress dots (capped at 9 for layout)
+            val dotsToShow = totalRounds.coerceAtMost(9)
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                (0 until dotsToShow).forEach { idx ->
+                    val dotSize = if (dotsToShow <= 3) 8.dp else 6.dp
                     Box(
                         modifier = Modifier
-                            .size(8.dp)
+                            .size(dotSize)
                             .clip(CircleShape)
                             .background(if (idx <= roundIndex) Gold else TextMuted)
                     )
                 }
             }
         }
-        // Timer
-        if (phase == GamePhase.PLAYING) {
+        // Timer or practice indicator
+        if (!timerEnabled) {
+            Text(
+                text      = "∞",
+                fontSize  = 24.sp,
+                color     = TextSecondary,
+                modifier  = Modifier.widthIn(min = 48.dp),
+                textAlign = TextAlign.End
+            )
+        } else if (phase == GamePhase.PLAYING) {
             val timerColor = when {
                 timeRemaining <= 5  -> TimerRed
                 timeRemaining <= 10 -> TimerAmber
@@ -352,8 +383,11 @@ private fun LettersPlayingPhase(state: GameUiState, viewModel: GameViewModel) {
                 modifier = Modifier.weight(1f),
                 colors   = ButtonDefaults.buttonColors(containerColor = Gold),
                 shape    = RoundedCornerShape(12.dp),
-                enabled  = state.currentWord.isNotEmpty()
-            ) { Text("Stop Clock", color = NavyDeep, fontWeight = FontWeight.Bold) }
+                enabled  = state.currentWord.isNotEmpty() || !state.timerEnabled
+            ) { Text(
+                if (state.timerEnabled) "Stop Clock" else "Done",
+                color = NavyDeep, fontWeight = FontWeight.Bold
+            ) }
         }
     }
 }

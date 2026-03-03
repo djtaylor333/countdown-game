@@ -1,9 +1,9 @@
 {
-  "versionName": "1.0.2",
+  "versionName": "1.0.3",
   "versionCode": 3,
   "minSdk": 29,
   "targetSdk": 35,
   "compileSdk": 35,
   "buildDate": "2026-03-03",
-  "releaseNotes": "Readable font (Rajdhani), fix vowel/consonant bug, 60s timer, interactive number picker"
+  "releaseNotes": "Practice mode, Full Game (9 rounds), Russo One tile font, single-row boards, bigger tiles, epoch-seeded randomness"
 }

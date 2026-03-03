@@ -24,6 +24,8 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun HomeScreen(
     onPlayClick: () -> Unit,
+    onPracticeClick: () -> Unit = {},
+    onFullGameClick: () -> Unit = {},
     onViewResults: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -186,6 +188,39 @@ fun HomeScreen(
                         ) {
                             Text("View Results", fontWeight = FontWeight.SemiBold)
                         }
+                    }
+
+                    // ── More modes ───────────────────────────────────────────
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text          = "MORE MODES",
+                        fontSize      = 10.sp,
+                        color         = TextMuted,
+                        letterSpacing = 2.sp,
+                        modifier      = Modifier.fillMaxWidth(),
+                        textAlign     = TextAlign.Center
+                    )
+                    OutlinedButton(
+                        onClick  = onPracticeClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape    = RoundedCornerShape(16.dp),
+                        colors   = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+                        border   = androidx.compose.foundation.BorderStroke(1.dp, TextSecondary.copy(alpha = 0.4f))
+                    ) {
+                        Text("🎯  Practice Mode (No Timer)", fontWeight = FontWeight.SemiBold)
+                    }
+                    OutlinedButton(
+                        onClick  = onFullGameClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape    = RoundedCornerShape(16.dp),
+                        colors   = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+                        border   = androidx.compose.foundation.BorderStroke(1.dp, TextSecondary.copy(alpha = 0.4f))
+                    ) {
+                        Text("🏆  Full Game (9 Rounds)", fontWeight = FontWeight.SemiBold)
                     }
                 }
             }

@@ -1,7 +1,9 @@
-package com.djtaylor.countdowngame.ui.game
+﻿package com.djtaylor.countdowngame.ui.game
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.djtaylor.countdowngame.data.GameResultStore
 import com.djtaylor.countdowngame.data.PreferencesRepository
 import com.djtaylor.countdowngame.data.WordRepository
 import com.djtaylor.countdowngame.domain.engine.DailyChallengeEngine
@@ -19,7 +21,9 @@ import javax.inject.Inject
 @HiltViewModel
 class GameViewModel @Inject constructor(
     private val wordRepository: WordRepository,
-    private val preferencesRepository: PreferencesRepository
+    private val preferencesRepository: PreferencesRepository,
+    private val gameResultStore: GameResultStore,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(GameUiState())
@@ -29,25 +33,97 @@ class GameViewModel @Inject constructor(
     private var countdownJob: Job? = null
 
     init {
-        loadChallenge()
+        val modeStr = savedStateHandle.get<String>("mode") ?: AppMode.DAILY.name
+        val mode = runCatching { AppMode.valueOf(modeStr) }.getOrDefault(AppMode.DAILY)
+        when (mode) {
+            AppMode.DAILY    -> loadDailyChallenge()
+            AppMode.PRACTICE -> loadPracticeChallenge(System.currentTimeMillis())
+            AppMode.FULL     -> loadFullGameChallenge(System.currentTimeMillis())
+        }
     }
 
-    private fun loadChallenge() {
+    // -- Challenge loading ----------------------------------------------------
+
+    private fun loadDailyChallenge() {
         val todayKey  = DailyChallengeEngine.getTodayKey()
         val challenge = DailyChallengeEngine.getDailyChallenge(todayKey)
+        val defs      = DailyChallengeEngine.dailyToRoundDefs(challenge)
         _uiState.update { it.copy(
-            isLoading  = false,
-            challenge  = challenge,
-            phase      = GamePhase.SELECTING,
-            numbers    = challenge.numbers,
-            target     = challenge.target,
-            availableNums = challenge.numbers
+            mode          = AppMode.DAILY,
+            timerEnabled  = true,
+            roundDefs     = defs,
+            isLoading     = false,
+            challenge     = challenge,
+            phase         = GamePhase.SELECTING,
+            numbers       = challenge.numbers,
+            target        = challenge.target,
+            availableNums = challenge.numbers,
+            roundResults  = List(defs.size) { null }
         ) }
+        initCurrentRound(0, defs, challenge)
     }
 
-    // ── Round lifecycle ───────────────────────────────────────────────────────
+    private fun loadPracticeChallenge(seed: Long) {
+        val defs = DailyChallengeEngine.generatePracticeRoundDefs(seed)
+        _uiState.update { GameUiState(
+            mode         = AppMode.PRACTICE,
+            timerEnabled = false,
+            roundDefs    = defs,
+            isLoading    = false,
+            phase        = GamePhase.SELECTING,
+            roundResults = List(defs.size) { null }
+        ) }
+        initCurrentRound(0, defs, null)
+    }
 
-    /** User taps "Ready" — start 3-2-1 countdown. */
+    private fun loadFullGameChallenge(seed: Long) {
+        val defs = DailyChallengeEngine.generateFullGameRoundDefs(seed)
+        _uiState.update { GameUiState(
+            mode         = AppMode.FULL,
+            timerEnabled = true,
+            roundDefs    = defs,
+            isLoading    = false,
+            phase        = GamePhase.SELECTING,
+            roundResults = List(defs.size) { null }
+        ) }
+        initCurrentRound(0, defs, null)
+    }
+
+    /** Prepare number pools and letters for the given round index. */
+    private fun initCurrentRound(index: Int, defs: List<RoundDef>, challenge: DailyChallenge?) {
+        val def = defs.getOrNull(index) ?: return
+        if (def.type == GameMode.NUMBERS) {
+            val seed   = (def.numsSeed and 0x7FFFFFFFL).toInt()
+            val nums   = NumbersEngine.generateNumbers(def.largeCount, seed)
+            val large  = LettersEngine.seededShuffle(listOf(25, 50, 75, 100), seed)
+            val small  = LettersEngine.seededShuffle(
+                listOf(1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10), seed + 77)
+            _uiState.update { it.copy(
+                numbers       = nums,
+                target        = def.target,
+                availableNums = nums,
+                numLargePool  = large,
+                numSmallPool  = small,
+                pickedNumbers = emptyList()
+            ) }
+        } else {
+            val letters: List<Char> = when {
+                challenge != null -> {
+                    val lettersIdx = defs.take(index + 1).count { it.type == GameMode.LETTERS } - 1
+                    if (lettersIdx == 0) challenge.letterRound1 else challenge.letterRound2
+                }
+                else -> {
+                    val seed       = (def.deckSeed and 0x7FFFFFFFL).toInt()
+                    val vowelCount = def.largeCount.coerceIn(3, 6)
+                    LettersEngine.generateSeededLetters(seed, vowelCount)
+                }
+            }
+            _uiState.update { it.copy(selectedLetters = letters) }
+        }
+    }
+
+    // -- Round lifecycle -------------------------------------------------------
+
     fun startCountdown() {
         _uiState.update { it.copy(phase = GamePhase.COUNTDOWN, countdownValue = 3) }
         countdownJob?.cancel()
@@ -60,7 +136,6 @@ class GameViewModel @Inject constructor(
         }
     }
 
-    /** User taps "Large" during numbers selecting phase. */
     fun pickLargeNumber() {
         val state = _uiState.value
         if (state.pickedNumbers.size >= 6 || state.numLargePool.isEmpty()) return
@@ -71,7 +146,6 @@ class GameViewModel @Inject constructor(
         ) }
     }
 
-    /** User taps "Small" during numbers selecting phase. */
     fun pickSmallNumber() {
         val state = _uiState.value
         if (state.pickedNumbers.size >= 6 || state.numSmallPool.isEmpty()) return
@@ -83,25 +157,26 @@ class GameViewModel @Inject constructor(
     }
 
     private fun startPlaying() {
-        val challenge = _uiState.value.challenge ?: return
-        val round     = _uiState.value.currentRound
-        val letters   = if (round == 0) challenge.letterRound1 else challenge.letterRound2
-        val nums      = if (round == 2) _uiState.value.pickedNumbers else challenge.numbers
+        val state     = _uiState.value
+        val def       = state.roundDefs.getOrNull(state.currentRound)
+        val isLetters = def?.type == GameMode.LETTERS || (def == null && state.currentRound < 2)
+        val nums: List<Int> = if (!isLetters) state.pickedNumbers else emptyList()
+
         _uiState.update { it.copy(
-            phase            = GamePhase.PLAYING,
-            timeRemaining    = 60,
-            selectedLetters  = letters,
-            currentWord      = emptyList(),
+            phase              = GamePhase.PLAYING,
+            timeRemaining      = 60,
+            currentWord        = emptyList(),
             currentWordIndices = emptyList(),
-            equationSteps    = emptyList(),
-            availableNums    = nums,
-            currentLeft      = null,
-            currentOp        = null
+            equationSteps      = emptyList(),
+            availableNums      = nums,
+            currentLeft        = null,
+            currentOp          = null
         ) }
         startTimer()
     }
 
     private fun startTimer() {
+        if (!_uiState.value.timerEnabled) return   // practice mode has no timer
         timerJob?.cancel()
         timerJob = viewModelScope.launch {
             for (seconds in 60 downTo 0) {
@@ -116,15 +191,13 @@ class GameViewModel @Inject constructor(
         }
     }
 
-    /** User taps "Stop the Clock" or timer hits 0. */
     fun submitAnswer() {
         timerJob?.cancel()
         _uiState.update { it.copy(phase = GamePhase.SUBMITTING) }
     }
 
-    // ── Letters interaction ───────────────────────────────────────────────────
+    // -- Letters interaction ---------------------------------------------------
 
-    /** User taps a letter tile to add it to the word being built. */
     fun addLetter(index: Int) {
         val state = _uiState.value
         if (state.phase != GamePhase.PLAYING) return
@@ -136,7 +209,6 @@ class GameViewModel @Inject constructor(
         ) }
     }
 
-    /** Remove the last letter placed in the word builder. */
     fun removeLetter() {
         val state = _uiState.value
         if (state.currentWord.isEmpty()) return
@@ -153,24 +225,20 @@ class GameViewModel @Inject constructor(
         ) }
     }
 
-    /** Submit the built word for validation. */
     fun submitWord(word: String) {
-        val state = _uiState.value
+        val state   = _uiState.value
+        val letters = state.selectedLetters
+        if (letters.isEmpty()) return
         viewModelScope.launch {
-            val letters  = state.challenge?.let {
-                if (state.currentRound == 0) it.letterRound1 else it.letterRound2
-            } ?: return@launch
-
-            val wordSet  = wordRepository.getWordSet()
-            val canForm  = LettersEngine.canFormWord(word, letters)
-            val inDict   = wordSet.contains(word.uppercase())
-            val valid    = canForm && inDict
-            val score    = if (valid) LettersEngine.scoreLetterRound(word) else 0
+            val wordSet   = wordRepository.getWordSet()
+            val canForm   = LettersEngine.canFormWord(word, letters)
+            val inDict    = wordSet.contains(word.uppercase())
+            val valid     = canForm && inDict
+            val score     = if (valid) LettersEngine.scoreLetterRound(word) else 0
             val bestWords = withContext(Dispatchers.Default) {
                 LettersEngine.findBestWords(letters, wordSet, limit = 5)
             }
             val maxScore = bestWords.firstOrNull()?.let { LettersEngine.scoreLetterRound(it) } ?: 0
-
             _uiState.update { it.copy(
                 submittedWord    = word.uppercase(),
                 wordIsValid      = valid,
@@ -182,22 +250,19 @@ class GameViewModel @Inject constructor(
         }
     }
 
-    // ── Numbers interaction ───────────────────────────────────────────────────
+    // -- Numbers interaction ---------------------------------------------------
 
     fun selectNumber(value: Int) {
         val state = _uiState.value
         if (state.phase != GamePhase.PLAYING) return
         if (state.currentLeft == null) {
-            // First operand
             _uiState.update { it.copy(
                 currentLeft   = value,
                 availableNums = it.availableNums.toMutableList().apply { remove(value) }
             ) }
-        }
-        // Second operand selected after op is set
-        else if (state.currentOp != null) {
-            val left   = state.currentLeft  // Int? — checked by outer else if
-            val op     = state.currentOp   // Operation? — checked by else if
+        } else if (state.currentOp != null) {
+            val left = state.currentLeft
+            val op   = state.currentOp
             if (left == null) return
             val result: Int? = when (op) {
                 Operation.PLUS   -> left + value
@@ -216,7 +281,6 @@ class GameViewModel @Inject constructor(
                     currentOp     = null
                 ) }
             } else {
-                // Invalid operation — put left operand back
                 _uiState.update { it.copy(
                     currentLeft   = null,
                     currentOp     = null,
@@ -233,8 +297,7 @@ class GameViewModel @Inject constructor(
     }
 
     fun undoNumberStep() {
-        val state = _uiState.value
-        // If just selected left operand (or op), cancel that
+        val state   = _uiState.value
         val leftVal = state.currentLeft
         if (leftVal != null) {
             _uiState.update { it.copy(
@@ -244,13 +307,9 @@ class GameViewModel @Inject constructor(
             ) }
             return
         }
-        // Otherwise undo last committed step
         val lastStep = state.equationSteps.lastOrNull() ?: return
         val newAvailable = state.availableNums.toMutableList().apply {
-            remove(lastStep.result)
-            add(lastStep.left)
-            add(lastStep.right)
-            sort()
+            remove(lastStep.result); add(lastStep.left); add(lastStep.right); sort()
         }
         _uiState.update { it.copy(
             equationSteps = it.equationSteps.dropLast(1),
@@ -268,7 +327,6 @@ class GameViewModel @Inject constructor(
         ) }
     }
 
-    /** Submit user's number solution after timer ends. */
     fun submitNumbers() {
         val state = _uiState.value
         viewModelScope.launch {
@@ -288,48 +346,65 @@ class GameViewModel @Inject constructor(
         }
     }
 
-    // ── Round completion ──────────────────────────────────────────────────────
+    // -- Round completion ------------------------------------------------------
 
-    /** User taps "Next Round" from results view. */
     fun advanceRound() {
-        val state = _uiState.value
+        val state     = _uiState.value
+        val def       = state.roundDefs.getOrNull(state.currentRound)
+        val isLetters = def?.type == GameMode.LETTERS || (def == null && state.currentRound < 2)
 
-        // Persist completed round result
-        val letterResult1 = if (state.currentRound == 0) buildLetterResult(state) else state.letterResult1
-        val letterResult2 = if (state.currentRound == 1) buildLetterResult(state) else state.letterResult2
-        val numberResult  = if (state.currentRound == 2) buildNumberResult(state) else state.numberResult
+        val result: Any? = if (isLetters) buildLetterResult(state) else buildNumberResult(state)
+        val newResults = state.roundResults.toMutableList().also {
+            if (state.currentRound < it.size) it[state.currentRound] = result
+        }
 
-        if (state.currentRound < 2) {
-            // Move to next round
+        val letterResult1 = if (state.currentRound == 0 && isLetters)
+            result as? LetterRoundResult ?: state.letterResult1 else state.letterResult1
+        val letterResult2 = if (state.currentRound == 1 && isLetters)
+            result as? LetterRoundResult ?: state.letterResult2 else state.letterResult2
+        val numberResult  = if (!isLetters)
+            result as? NumberRoundResult ?: state.numberResult else state.numberResult
+
+        val nextRound = state.currentRound + 1
+
+        if (nextRound < state.totalRounds) {
             _uiState.update { it.copy(
-                currentRound  = it.currentRound + 1,
-                phase         = GamePhase.SELECTING,
-                letterResult1 = letterResult1,
-                letterResult2 = letterResult2,
-                numberResult  = numberResult,
-                currentWord   = emptyList(),
+                currentRound       = nextRound,
+                phase              = GamePhase.SELECTING,
+                letterResult1      = letterResult1,
+                letterResult2      = letterResult2,
+                numberResult       = numberResult,
+                roundResults       = newResults,
+                currentWord        = emptyList(),
                 currentWordIndices = emptyList(),
-                submittedWord = "",
-                wordIsValid   = null,
-                wordScore     = 0,
-                equationSteps = emptyList(),
-                availableNums = emptyList(),
-                currentLeft   = null,
-                currentOp     = null,
-                pickedNumbers = emptyList(),
-                numLargePool  = listOf(25, 50, 75, 100).shuffled(),
-                numSmallPool  = listOf(1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10).shuffled()
+                submittedWord      = "",
+                wordIsValid        = null,
+                wordScore          = 0,
+                equationSteps      = emptyList(),
+                availableNums      = emptyList(),
+                currentLeft        = null,
+                currentOp          = null,
+                pickedNumbers      = emptyList()
             ) }
+            initCurrentRound(nextRound, state.roundDefs, state.challenge)
         } else {
-            // All 3 rounds done — save and move to complete
-            viewModelScope.launch {
-                saveDailyResult(letterResult1, letterResult2, numberResult, state)
+            if (state.mode == AppMode.DAILY) {
+                viewModelScope.launch {
+                    saveDailyResult(letterResult1, letterResult2, numberResult, state)
+                }
+            } else {
+                gameResultStore.lastSummary = GameResultStore.GameSummary(
+                    mode         = state.mode,
+                    roundDefs    = state.roundDefs,
+                    roundResults = newResults
+                )
             }
             _uiState.update { it.copy(
                 phase         = GamePhase.COMPLETE,
                 letterResult1 = letterResult1,
                 letterResult2 = letterResult2,
-                numberResult  = numberResult
+                numberResult  = numberResult,
+                roundResults  = newResults
             ) }
         }
     }
@@ -353,12 +428,12 @@ class GameViewModel @Inject constructor(
     private suspend fun saveDailyResult(
         letterResult1: LetterRoundResult?,
         letterResult2: LetterRoundResult?,
-        numberResult: NumberRoundResult?,
+        numberResult:  NumberRoundResult?,
         state: GameUiState
     ) {
         val todayKey = state.challenge?.dateKey ?: return
         val result = DailyResult(
-            dateKey      = todayKey,
+            dateKey       = todayKey,
             lettersScore1 = letterResult1?.userScore ?: 0,
             lettersMax1   = letterResult1?.maxPossibleScore ?: 0,
             letterWord1   = letterResult1?.userWord ?: "",
