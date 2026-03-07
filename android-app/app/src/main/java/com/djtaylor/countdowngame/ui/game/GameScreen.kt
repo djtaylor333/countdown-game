@@ -5,8 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -28,6 +26,8 @@ import com.djtaylor.countdowngame.domain.model.GameMode
 import com.djtaylor.countdowngame.domain.model.GamePhase
 import com.djtaylor.countdowngame.domain.model.Operation
 import com.djtaylor.countdowngame.ui.theme.*
+import com.djtaylor.countdowngame.ui.theme.SpaceGroteskFamily
+import com.djtaylor.countdowngame.ui.theme.RajdhaniFamily
 
 @Composable
 fun GameScreen(
@@ -135,12 +135,18 @@ private fun GameTopBar(
         IconButton(onClick = onHome) {
             Icon(Icons.Default.Home, "Home", tint = TextSecondary)
         }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.weight(1f)
+        ) {
             Text(
                 text       = roundNames.getOrElse(roundIndex) { "Round" },
                 fontWeight = FontWeight.Bold,
+                fontFamily = RajdhaniFamily,
                 color      = Gold,
-                fontSize   = 16.sp
+                fontSize   = 17.sp,
+                textAlign  = TextAlign.Center,
+                modifier   = Modifier.fillMaxWidth()
             )
             // Round progress dots (capped at 9 for layout)
             val dotsToShow = totalRounds.coerceAtMost(9)
@@ -201,12 +207,24 @@ private fun SelectingPhase(
     ) {
         if (state.isLettersRound) {
             val letters = state.availableLetters
-            Text("Your 9 Letters", color = TextSecondary, fontSize = 14.sp)
+            Text(
+                "Your 9 Letters",
+                color      = TextSecondary,
+                fontSize   = 14.sp,
+                fontFamily = RajdhaniFamily,
+                fontWeight = FontWeight.SemiBold
+            )
             Spacer(Modifier.height(24.dp))
             LetterTileRow(letters = letters.map { it.toString() }, selectedIndices = emptySet())
         } else {
             // Numbers round — interactive picker
-            Text("Pick your 6 numbers", color = TextSecondary, fontSize = 14.sp)
+            Text(
+                "Pick your 6 numbers",
+                color      = TextSecondary,
+                fontSize   = 14.sp,
+                fontFamily = RajdhaniFamily,
+                fontWeight = FontWeight.SemiBold
+            )
             Text(
                 text      = "${state.pickedNumbers.size}/6 chosen  •  up to 4 large",
                 fontSize  = 12.sp,
@@ -356,6 +374,7 @@ private fun LettersPlayingPhase(state: GameUiState, viewModel: GameViewModel) {
                     text       = state.currentWord.joinToString(""),
                     fontSize   = 28.sp,
                     fontWeight = FontWeight.Black,
+                    fontFamily = SpaceGroteskFamily,
                     color      = if (state.currentWord.isEmpty()) TextMuted else Gold,
                     modifier   = Modifier.weight(1f)
                 )
@@ -683,27 +702,41 @@ private fun LetterTileRow(
     selectedIndices: Set<Int>,
     onTap: ((Int) -> Unit)? = null
 ) {
-    LazyRow(
+    // Use a full-width Row so tiles fill the screen (like web grid-cols-9)
+    Row(
         modifier              = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        contentPadding        = PaddingValues(horizontal = 4.dp)
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        itemsIndexed(letters) { idx, letter ->
+        letters.forEachIndexed { idx, letter ->
             val isSelected = idx in selectedIndices
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (isSelected) TileUsed else TileBlue)
-                    .border(1.dp, if (isSelected) TextMuted else TileBlueBorder, RoundedCornerShape(8.dp))
-                    .then(if (onTap != null && !isSelected) Modifier.clickable { onTap(idx) } else Modifier),
+                    .weight(1f)
+                    .aspectRatio(1f)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(
+                        if (isSelected) TileUsed
+                        else TileBlue
+                    )
+                    .border(
+                        2.dp,
+                        if (isSelected) TextMuted else TileBlueBorder,
+                        RoundedCornerShape(6.dp)
+                    )
+                    .then(
+                        if (onTap != null && !isSelected)
+                            Modifier.clickable { onTap(idx) }
+                        else Modifier
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text       = letter,
-                    fontSize   = 18.sp,
+                    fontSize   = 14.sp,
                     fontWeight = FontWeight.Black,
-                    color      = if (isSelected) TextMuted else TextPrimary
+                    fontFamily = SpaceGroteskFamily,
+                    color      = if (isSelected) TextMuted else TextPrimary,
+                    textAlign  = TextAlign.Center
                 )
             }
         }
@@ -719,24 +752,31 @@ private fun NumberTileRow(
     val largeSet = setOf(25, 50, 75, 100)
     Row(
         modifier              = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         numbers.forEachIndexed { idx, n ->
             val isLarge = n in largeSet
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .height(52.dp)
+                    .height(56.dp)
                     .clip(RoundedCornerShape(10.dp))
                     .background(if (isLarge) NumberTileLarge else TileBlue)
+                    .border(
+                        2.dp,
+                        if (isLarge) Gold.copy(alpha = 0.7f) else TileBlueBorder,
+                        RoundedCornerShape(10.dp)
+                    )
                     .clickable { onTap(n) },
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text       = n.toString(),
-                    fontSize   = 18.sp,
+                    fontSize   = if (n >= 100) 14.sp else 18.sp,
                     fontWeight = FontWeight.Black,
-                    color      = TextPrimary
+                    fontFamily = SpaceGroteskFamily,
+                    color      = if (isLarge) Gold else TextPrimary,
+                    textAlign  = TextAlign.Center
                 )
             }
         }

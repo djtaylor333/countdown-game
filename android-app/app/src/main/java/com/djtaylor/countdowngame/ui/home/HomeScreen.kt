@@ -2,7 +2,9 @@ package com.djtaylor.countdowngame.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
@@ -18,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.djtaylor.countdowngame.ui.theme.*
+import com.djtaylor.countdowngame.ui.theme.RajdhaniFamily
+import com.djtaylor.countdowngame.ui.theme.SpaceGroteskFamily
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -48,18 +52,21 @@ fun HomeScreen(
                 modifier            = Modifier
                     .fillMaxSize()
                     .systemBarsPadding()
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 24.dp, vertical = 32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween
+                verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 // ── Header ────────────────────────────────────────────────────
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text       = "COUNTDOWN",
-                        fontSize   = 36.sp,
-                        fontWeight = FontWeight.Black,
-                        color      = Gold,
-                        letterSpacing = 4.sp
+                        text          = "COUNTDOWN",
+                        fontSize      = 36.sp,
+                        fontWeight    = FontWeight.Black,
+                        fontFamily    = RajdhaniFamily,
+                        color         = Gold,
+                        letterSpacing = 4.sp,
+                        textAlign     = TextAlign.Center
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
@@ -272,10 +279,11 @@ private fun RoundPreviewRow(label: String, letters: String) {
     ) {
         Text(text = label, fontSize = 12.sp, color = TextMuted, modifier = Modifier.width(72.dp))
         Text(
-            text       = letters,
-            fontSize   = 13.sp,
-            fontWeight = FontWeight.SemiBold,
-            color      = TextPrimary,
+            text          = letters,
+            fontSize      = 13.sp,
+            fontWeight    = FontWeight.SemiBold,
+            fontFamily    = SpaceGroteskFamily,
+            color         = TextPrimary,
             letterSpacing = 1.sp
         )
     }
