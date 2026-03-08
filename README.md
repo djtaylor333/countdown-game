@@ -2,7 +2,7 @@
 
 [![Deploy PWA](https://github.com/djtaylor333/countdown-game/actions/workflows/deploy-web.yml/badge.svg)](https://github.com/djtaylor333/countdown-game/actions/workflows/deploy-web.yml)
 [![Build Android](https://github.com/djtaylor333/countdown-game/actions/workflows/build-android.yml/badge.svg)](https://github.com/djtaylor333/countdown-game/actions/workflows/build-android.yml)
-![Version](https://img.shields.io/badge/version-1.0.4-blue)
+![Version](https://img.shields.io/badge/version-1.0.5-blue)
 
 A daily word and numbers puzzle game inspired by the British TV show *Countdown*, available as a **Progressive Web App** (GitHub Pages) and **Android app**.
 
@@ -191,6 +191,14 @@ Triggers on any `v*` tag push alongside the web deploy.
 | Definitions | Free Dictionary API |
 | Android | Kotlin 2.1 + Jetpack Compose + Hilt |
 | CI/CD | GitHub Actions (deploy-web.yml + build-android.yml) |
+
+---
+
+## Privacy Policy
+
+The App collects no personal data. All game data (streaks, results) is stored locally on-device only.
+
+🔒 **Privacy Policy:** https://djtaylor333.github.io/countdown-game/privacy
 
 ---
 
