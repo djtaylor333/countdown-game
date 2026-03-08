@@ -5,7 +5,7 @@ import type { LetterRoundResult, NumberRoundResult, BestWord } from '../logic/ty
 import { fetchDefinition } from '../logic/dictionary';
 import { formatSolution } from '../logic/numbers';
 
-export function LetterRoundResultPanel({ result, roundNum }: { result: LetterRoundResult; roundNum: number }) {
+export function LetterRoundResultPanel({ result, roundNum, timedOut }: { result: LetterRoundResult; roundNum: number; timedOut?: boolean }) {
   const [bestWords, setBestWords] = useState<BestWord[]>(result.bestWords);
 
   useEffect(() => {
@@ -31,7 +31,8 @@ export function LetterRoundResultPanel({ result, roundNum }: { result: LetterRou
   return (
     <div className="rounded-2xl bg-[#0f1f38] border border-[#1a3560] p-4 flex flex-col gap-4 animate-slide-up">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide">
+        <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide flex items-center gap-2">
+          {timedOut && <span className="text-[#f6c90e]">⏰</span>}
           Letters Round {roundNum}
         </h3>
         <span className={`text-sm font-bold font-rajdhani ${pct === 100 ? 'text-green-400' : pct >= 70 ? 'text-[#f6c90e]' : 'text-slate-300'}`}>
@@ -87,7 +88,7 @@ export function LetterRoundResultPanel({ result, roundNum }: { result: LetterRou
   );
 }
 
-export function NumberRoundResultPanel({ result }: { result: NumberRoundResult }) {
+export function NumberRoundResultPanel({ result, timedOut }: { result: NumberRoundResult; timedOut?: boolean }) {
   const diffDisplay = result.userResult !== null
     ? Math.abs(result.userResult - result.target)
     : null;
@@ -95,7 +96,8 @@ export function NumberRoundResultPanel({ result }: { result: NumberRoundResult }
   return (
     <div className="rounded-2xl bg-[#0f1f38] border border-[#1a3560] p-4 flex flex-col gap-4 animate-slide-up">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide">
+        <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide flex items-center gap-2">
+          {timedOut && <span className="text-[#f6c90e]">⏰</span>}
           Numbers Round
         </h3>
         <span className={`text-sm font-bold font-rajdhani ${result.userScore === 10 ? 'text-green-400' : result.userScore > 0 ? 'text-[#f6c90e]' : 'text-slate-400'}`}>

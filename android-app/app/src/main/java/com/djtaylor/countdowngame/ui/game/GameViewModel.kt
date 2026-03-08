@@ -183,11 +183,28 @@ class GameViewModel @Inject constructor(
                 if (!isActive) break
                 _uiState.update { it.copy(timeRemaining = seconds) }
                 if (seconds == 0) {
-                    submitAnswer()
+                    timerExpired()   // auto-submit — skips interactive SUBMITTING phase
                     break
                 }
                 delay(1000)
             }
+        }
+    }
+
+    /**
+     * Called only by the countdown timer reaching zero.
+     * Sets [timedOut] = true and immediately computes results, skipping the
+     * interactive SUBMITTING phase so the player cannot enter more input.
+     */
+    private fun timerExpired() {
+        timerJob?.cancel()
+        val state = _uiState.value
+        _uiState.update { it.copy(timedOut = true) }
+        if (state.isLettersRound) {
+            val word = state.currentWord.joinToString("")
+            submitWord(word)       // empty string → score 0, bestWords revealed
+        } else {
+            submitNumbers()        // empty steps → score 0, solution revealed
         }
     }
 
@@ -371,6 +388,7 @@ class GameViewModel @Inject constructor(
             _uiState.update { it.copy(
                 currentRound       = nextRound,
                 phase              = GamePhase.SELECTING,
+                timedOut           = false,
                 letterResult1      = letterResult1,
                 letterResult2      = letterResult2,
                 numberResult       = numberResult,
@@ -401,6 +419,7 @@ class GameViewModel @Inject constructor(
             }
             _uiState.update { it.copy(
                 phase         = GamePhase.COMPLETE,
+                timedOut      = false,
                 letterResult1 = letterResult1,
                 letterResult2 = letterResult2,
                 numberResult  = numberResult,

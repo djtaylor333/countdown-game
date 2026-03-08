@@ -1,9 +1,9 @@
 {
-  "versionName": "1.0.5",
-  "versionCode": 5,
+  "versionName": "1.0.6",
+  "versionCode": 6,
   "minSdk": 29,
   "targetSdk": 35,
   "compileSdk": 35,
-  "buildDate": "2026-06-22",
-  "releaseNotes": "Android redesign matching web app: web-exact colors (navy/gold/blue tiles), Space Grotesk + Rajdhani Google Fonts, full-width letter tile grid, centered level labels, scrollable home screen, more unit tests"
+  "buildDate": "2026-03-09",
+  "releaseNotes": "Timer expiry auto-submit: when the 60s clock hits zero, immediately reveal answers and show TimesUp popup instead of allowing further input. No more interactive submitting phase on timeout. New tests cover timer-expiry scoring and state transitions."
 }

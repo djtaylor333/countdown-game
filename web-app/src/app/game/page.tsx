@@ -28,6 +28,7 @@ import WordBuilder from '../../components/WordBuilder';
 import NumberBoard from '../../components/NumberBoard';
 import NumberBuilder from '../../components/NumberBuilder';
 import { LetterRoundResultPanel, NumberRoundResultPanel } from '../../components/RoundResult';
+import TimesUpModal from '../../components/TimesUpModal';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -83,6 +84,8 @@ interface GameState {
   numSmallPool: number[];
   // Results — one entry per round
   results: (LetterRoundResult | NumberRoundResult | null)[];
+  // Timer expiry flag — set when clock hits 0, cleared each round
+  timedOut: boolean;
 }
 
 type GameAction =
@@ -106,7 +109,8 @@ type GameAction =
   | { type: 'PICK_SMALL_NUMBER' }
   | { type: 'SUBMIT_NUMBERS' }
   | { type: 'SET_NUMBER_RESULT'; result: NumberRoundResult }
-  | { type: 'NEXT_ROUND' };
+  | { type: 'NEXT_ROUND' }
+  | { type: 'DISMISS_TIMED_OUT' };
 
 function makeInitialNumberPools(def: RoundDef | undefined): { large: number[]; small: number[] } {
   if (def?.type === 'numbers') {
@@ -159,6 +163,7 @@ function initState(mode: AppMode): GameState {
     numLargePool: large,
     numSmallPool: small,
     results: Array(roundDefs.length).fill(null) as null[],
+    timedOut: false,
   };
 }
 
@@ -192,7 +197,7 @@ function reducer(state: GameState, action: GameAction): GameState {
       return { ...state, timeRemaining: Math.max(0, state.timeRemaining - 1) };
 
     case 'TIMER_EXPIRED':
-      return { ...state, phase: 'submitting', timeRemaining: 0 };
+      return { ...state, phase: 'submitting', timeRemaining: 0, timedOut: true };
 
     case 'PICK_LETTER': {
       const idx = action.index;
@@ -328,8 +333,12 @@ function reducer(state: GameState, action: GameAction): GameState {
         pickedNumbers: [],
         numLargePool: large,
         numSmallPool: small,
+        timedOut: false,
       };
     }
+
+    case 'DISMISS_TIMED_OUT':
+      return { ...state, timedOut: false };
 
     default:
       return state;
@@ -368,7 +377,9 @@ function GamePageContent() {
   const mode = (searchParams.get('mode') ?? 'daily') as AppMode;
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoSubmitFiredRef = useRef(false);
   const [isValidating, setIsValidating] = useState(false);
+  const [timedOutDismissed, setTimedOutDismissed] = useState(false);
 
   const [state, dispatch] = useReducer(reducer, mode, initState);
 
@@ -386,6 +397,9 @@ function GamePageContent() {
     if (isLettersRound && phase === 'selecting') {
       resetDecks(currentDef?.deckSeed);
     }
+    // Reset auto-submit guard and modal dismissed state on each new round
+    autoSubmitFiredRef.current = false;
+    setTimedOutDismissed(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.roundIndex, phase]);
 
@@ -418,6 +432,24 @@ function GamePageContent() {
       dispatch({ type: 'TIMER_EXPIRED' });
     }
   }, [phase, timeRemaining, state.timerEnabled]);
+
+  // ── Auto-submit on timer expiry (skip the interactive submitting phase) ──
+  // Fires once per round when timedOut becomes true in 'submitting' phase.
+  useEffect(() => {
+    if (!state.timedOut || phase !== 'submitting' || autoSubmitFiredRef.current) return;
+    autoSubmitFiredRef.current = true;
+
+    if (isLettersRound) {
+      if (state.wordIndices.length > 0) {
+        handleSubmitWord();
+      } else {
+        handleSkipLetterRound();
+      }
+    } else if (isNumbersRound) {
+      handleSubmitNumbersRef.current();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.timedOut, phase]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -473,6 +505,7 @@ function GamePageContent() {
 
   useEffect(() => {
     if (!isLettersRound || (phase !== 'playing' && phase !== 'submitting')) return;
+    if (state.timedOut) return; // block keyboard input after timer expires
 
     const handleKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -521,6 +554,10 @@ function GamePageContent() {
     };
     dispatch({ type: 'SET_NUMBER_RESULT', result });
   }
+
+  // Stable memoized version used by the auto-submit effect
+  const handleSubmitNumbersRef = useRef(handleSubmitNumbers);
+  handleSubmitNumbersRef.current = handleSubmitNumbers;
 
   function handleNextOrFinish() {
     if (!isLastRound) {
@@ -777,6 +814,12 @@ function GamePageContent() {
 
       {/* ── SUBMITTING — Letters ── */}
       {phase === 'submitting' && isLettersRound && (
+        state.timedOut ? (
+          /* Auto-submitting after timer expiry — show brief loading */
+          <div className="w-full flex flex-col items-center gap-4 py-8">
+            <p className="text-center text-[#f6c90e] font-rajdhani text-lg animate-pulse">⏰ Time&apos;s Up! Calculating results…</p>
+          </div>
+        ) : (
         <div className="w-full flex flex-col gap-4">
           <p className="text-center text-slate-400">
             {!state.timerEnabled ? 'Confirm your word' : timeRemaining === 0 ? "Time's up!" : 'Confirm your word'}
@@ -806,10 +849,16 @@ function GamePageContent() {
             <p className="text-center text-[#f6c90e] font-rajdhani animate-pulse">Checking word…</p>
           )}
         </div>
+        )
       )}
 
       {/* ── SUBMITTING — Numbers ── */}
       {phase === 'submitting' && isNumbersRound && (
+        state.timedOut ? (
+          <div className="w-full flex flex-col items-center gap-4 py-8">
+            <p className="text-center text-[#f6c90e] font-rajdhani text-lg animate-pulse">⏰ Time&apos;s Up! Calculating results…</p>
+          </div>
+        ) : (
         <div className="w-full flex flex-col gap-4">
           <p className="text-center text-slate-400">Confirm your answer</p>
           <NumberBoard
@@ -844,14 +893,23 @@ function GamePageContent() {
             </button>
           </div>
         </div>
+        )
       )}
 
       {/* ── RESULTS ── */}
       {phase === 'results' && isLettersRound && (
         <div className="w-full flex flex-col gap-4">
+          {state.timedOut && !timedOutDismissed && (
+            <TimesUpModal
+              type="letters"
+              result={state.results[state.roundIndex] as LetterRoundResult}
+              onDismiss={() => setTimedOutDismissed(true)}
+            />
+          )}
           <LetterRoundResultPanel
             result={state.results[state.roundIndex] as LetterRoundResult}
             roundNum={state.roundDefs.slice(0, state.roundIndex + 1).filter(d => d.type === 'letters').length}
+            timedOut={state.timedOut}
           />
           <button
             onClick={handleNextOrFinish}
@@ -864,7 +922,14 @@ function GamePageContent() {
 
       {phase === 'results' && isNumbersRound && (
         <div className="w-full flex flex-col gap-4">
-          <NumberRoundResultPanel result={state.results[state.roundIndex] as NumberRoundResult} />
+          {state.timedOut && !timedOutDismissed && (
+            <TimesUpModal
+              type="numbers"
+              result={state.results[state.roundIndex] as NumberRoundResult}
+              onDismiss={() => setTimedOutDismissed(true)}
+            />
+          )}
+          <NumberRoundResultPanel result={state.results[state.roundIndex] as NumberRoundResult} timedOut={state.timedOut} />
           <button
             onClick={handleNextOrFinish}
             className="w-full py-3 rounded-2xl bg-[#f6c90e] text-[#070e1c] font-bold font-rajdhani uppercase tracking-wide transition-all active:scale-95"

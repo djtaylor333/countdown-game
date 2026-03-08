@@ -5,8 +5,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -19,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.djtaylor.countdowngame.domain.engine.LettersEngine
 import com.djtaylor.countdowngame.domain.model.AppMode
@@ -38,6 +41,15 @@ fun GameScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
+    // Show the Times Up dialog overlay when the timer fires and results are ready
+    var showTimedOutPanel by remember { mutableStateOf(false) }
+    LaunchedEffect(state.timedOut, state.phase) {
+        if (state.timedOut && state.phase == GamePhase.RESULTS) showTimedOutPanel = true
+    }
+    LaunchedEffect(state.currentRound) {
+        showTimedOutPanel = false
+    }
+
     // Navigate out when all rounds done
     LaunchedEffect(state.phase) {
         if (state.phase == GamePhase.COMPLETE) {
@@ -54,6 +66,14 @@ fun GameScreen(
         if (state.isLoading) {
             CircularProgressIndicator(Modifier.align(Alignment.Center), color = Gold)
             return@Box
+        }
+
+        // ── Times Up dialog overlay ───────────────────────────────────────────
+        if (showTimedOutPanel) {
+            TimesUpDialog(
+                state    = state,
+                onDismiss = { showTimedOutPanel = false }
+            )
         }
 
         Column(
@@ -690,6 +710,205 @@ private fun RoundResultsPhase(state: GameUiState, onNext: () -> Unit) {
                 fontWeight = FontWeight.Bold,
                 fontSize   = 16.sp
             )
+        }
+    }
+}
+
+// ── Times Up dialog ────────────────────────────────────────────────────────────
+
+@Composable
+private fun TimesUpDialog(state: GameUiState, onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape  = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = NavyDark),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, Gold.copy(alpha = 0.4f), RoundedCornerShape(24.dp))
+        ) {
+            Column(
+                modifier            = Modifier
+                    .padding(24.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Header
+                Text("⏰", fontSize = 40.sp)
+                Text(
+                    "Time's Up!",
+                    fontSize   = 28.sp,
+                    fontWeight = FontWeight.Black,
+                    fontFamily = RajdhaniFamily,
+                    color      = Gold
+                )
+                Text(
+                    if (state.isLettersRound) "Best words available" else "The solution",
+                    fontSize = 13.sp,
+                    color    = TextSecondary
+                )
+
+                HorizontalDivider(color = TileBlueBorder.copy(alpha = 0.5f))
+
+                if (state.isLettersRound) {
+                    TimesUpLettersContent(state)
+                } else {
+                    TimesUpNumbersContent(state)
+                }
+
+                Button(
+                    onClick  = onDismiss,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    colors   = ButtonDefaults.buttonColors(containerColor = Gold),
+                    shape    = RoundedCornerShape(14.dp)
+                ) {
+                    Text("See Results", color = NavyDeep, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimesUpLettersContent(state: GameUiState) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // Player's word
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Navy),
+            shape  = RoundedCornerShape(10.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier          = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text("Your word", fontSize = 11.sp, color = TextMuted)
+                    Text(
+                        state.submittedWord.ifEmpty { "—" },
+                        fontSize   = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = SpaceGroteskFamily,
+                        color      = TextPrimary
+                    )
+                }
+                when {
+                    state.wordIsValid == true ->
+                        Text("+${state.wordScore} pts", color = Success, fontWeight = FontWeight.Bold)
+                    state.submittedWord.isNotEmpty() ->
+                        Text("✗ Invalid", color = Error, fontSize = 12.sp)
+                    else ->
+                        Text("No word", color = TextMuted, fontSize = 12.sp)
+                }
+            }
+        }
+
+        // Best words
+        if (state.bestWords.isNotEmpty()) {
+            Text("Best available", fontSize = 11.sp, color = TextMuted)
+            state.bestWords.take(3).forEachIndexed { i, word ->
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (i == 0) Gold.copy(alpha = 0.08f) else TileBlue
+                    ),
+                    shape    = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier          = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            word,
+                            fontSize   = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = SpaceGroteskFamily,
+                            color      = Gold
+                        )
+                        val score = LettersEngine.scoreLetterRound(word)
+                        Text(
+                            if (word.length == 9) "FULL HOUSE!" else "$score pts",
+                            fontSize   = 12.sp,
+                            color      = if (word.length == 9) Gold else TextSecondary,
+                            fontWeight = if (word.length == 9) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimesUpNumbersContent(state: GameUiState) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // Target
+        Row(
+            modifier              = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment     = Alignment.CenterVertically
+        ) {
+            Text("Target: ", fontSize = 14.sp, color = TextSecondary)
+            Text(
+                state.target.toString(),
+                fontSize   = 28.sp,
+                fontWeight = FontWeight.Black,
+                color      = Gold
+            )
+        }
+
+        // Player answer
+        val diff = if (state.numbersResult != null) kotlin.math.abs(state.numbersResult - state.target) else null
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Navy),
+            shape  = RoundedCornerShape(10.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier          = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Your answer", fontSize = 11.sp, color = TextMuted)
+                if (state.numbersResult != null) {
+                    val col = when {
+                        diff == 0  -> Success
+                        diff != null && diff <= 10 -> Warning
+                        else -> Error
+                    }
+                    Text(
+                        text = "${state.numbersResult}${if (diff != null && diff > 0) " ($diff away)" else ""}" ,
+                        fontSize = 18.sp, fontWeight = FontWeight.Bold, color = col
+                    )
+                } else {
+                    Text("No answer", color = TextMuted, fontSize = 13.sp)
+                }
+            }
+        }
+
+        // Solution
+        if (!state.solution.isNullOrEmpty()) {
+            Text("Solution", fontSize = 11.sp, color = TextMuted)
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Gold.copy(alpha = 0.06f)),
+                shape  = RoundedCornerShape(10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, Gold.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+            ) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    state.solution.forEach { step ->
+                        Text(
+                            "${step.left} ${step.op.symbol} ${step.right} = ${step.result}",
+                            color      = Gold,
+                            fontSize   = 14.sp,
+                            fontFamily = SpaceGroteskFamily
+                        )
+                    }
+                }
+            }
         }
     }
 }

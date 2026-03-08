@@ -22,6 +22,8 @@ data class GameUiState(
     // ── Timer ─────────────────────────────────────────────────────────────────
     val timeRemaining: Int      = 60,   // seconds
     val countdownValue: Int     = 3,    // 3-2-1 pre-round countdown
+    /** True when the 60-second round timer hit zero (auto-submit fired). */
+    val timedOut: Boolean       = false,
 
     // ── Letters round state ───────────────────────────────────────────────────
     val selectedLetters: List<Char>    = emptyList(),
